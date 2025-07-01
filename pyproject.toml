@@ -67,7 +67,7 @@ test = [
 "Documentation" = "https://github.com/example/ast-grep-mcp#readme"
 
 [project.scripts]
-ast-grep-mcp = "ast_grep_mcp.server:main"
+ast-grep-mcp = "ast_grep_mcp.server:main_sync"
 
 [tool.setuptools.packages.find]
 where = ["src"]

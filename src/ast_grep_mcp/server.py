@@ -634,6 +634,7 @@ class ASTGrepMCPServer:
         self._running = False
         self._start_time = time.time()
         self._shutdown_event = asyncio.Event()
+        self._shutdown_timeout = 30.0  # Default shutdown timeout
         
         # Initialization tracking
         self._initialization_state = InitializationState()
@@ -886,13 +887,13 @@ class ASTGrepMCPServer:
         # Get component references (these are now initialized globally)
         from .performance import (
             get_performance_manager,
-            get_memory_manager, 
-            get_metrics_manager
+            get_metrics_collector
         )
+        from .tools import get_memory_manager
         
         self._performance_manager = get_performance_manager()
         self._memory_monitor = get_memory_manager()
-        self._metrics_collector = get_metrics_manager()
+        self._metrics_collector = get_metrics_collector()
         
         logger.info("Performance system initialized successfully")
     
@@ -1876,5 +1877,10 @@ async def main() -> None:
         sys.exit(1)
 
 
+def main_sync() -> None:
+    """Synchronous entry point for console script."""
+    asyncio.run(main())
+
+
 if __name__ == "__main__":
-    asyncio.run(main()) 
+    main_sync() 

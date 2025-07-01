@@ -242,13 +242,27 @@ class StructuredFormatter(logging.Formatter):
         return json.dumps(log_data, separators=(',', ':'))
 
 
+class SafeFormatter(logging.Formatter):
+    """Formatter that handles missing log record fields gracefully."""
+    
+    def format(self, record: logging.LogRecord) -> str:
+        """Format with safe handling of missing fields."""
+        # Ensure required fields exist with fallbacks
+        if not hasattr(record, 'iso_timestamp'):
+            record.iso_timestamp = datetime.fromtimestamp(record.created).isoformat()
+        if not hasattr(record, 'correlation_id'):
+            record.correlation_id = 'none'
+        
+        return super().format(record)
+
+
 class PerformanceAwareFormatter(logging.Formatter):
     """Formatter that adjusts verbosity based on performance impact."""
     
     def __init__(self, detailed_format: str, simple_format: str, performance_threshold: float = 1000.0):
         super().__init__()
-        self.detailed_formatter = logging.Formatter(detailed_format)
-        self.simple_formatter = logging.Formatter(simple_format)
+        self.detailed_formatter = SafeFormatter(detailed_format)
+        self.simple_formatter = SafeFormatter(simple_format)
         self.performance_threshold = performance_threshold
         self.recent_log_times = []
         self.lock = threading.Lock()
@@ -414,7 +428,7 @@ class EnhancedLoggingManager:
         elif self.config.format_type == "structured":
             formatter = StructuredFormatter()
         else:
-            formatter = logging.Formatter(
+            formatter = SafeFormatter(
                 '%(iso_timestamp)s - %(name)s - %(levelname)s - %(correlation_id)s - %(message)s'
             )
         
@@ -435,7 +449,7 @@ class EnhancedLoggingManager:
     
     def _setup_console_logging(self, root_logger: logging.Logger) -> None:
         """Setup console logging."""
-        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler = logging.StreamHandler(sys.stderr)
         
         console_level = self.config.console_level or self.config.level
         console_handler.setLevel(getattr(logging, console_level))
@@ -446,7 +460,7 @@ class EnhancedLoggingManager:
             simple_format = '%(levelname)s - %(name)s - %(message)s'
             formatter = PerformanceAwareFormatter(detailed_format, simple_format)
         else:
-            formatter = logging.Formatter(
+            formatter = SafeFormatter(
                 '%(iso_timestamp)s - %(name)s - %(levelname)s - %(correlation_id)s - %(message)s'
             )
         
