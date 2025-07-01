@@ -1532,7 +1532,7 @@ class EnhancedPerformanceManager(PerformanceManager):
         
     async def start(self) -> None:
         """Start all performance management subsystems."""
-        await super().start()
+        # Note: Base class has no start() method, initializing directly
         
         # Initialize components that depend on classes defined later in the file
         if self._streaming_manager is None:
@@ -1591,7 +1591,7 @@ class EnhancedPerformanceManager(PerformanceManager):
                         continue
                     
                     # Get system metrics
-                    memory_snapshot = await self._memory_monitor.get_current_snapshot()
+                    memory_snapshot = self._memory_monitor.get_current_usage()
                     cpu_usage = memory_snapshot.cpu_percent if hasattr(memory_snapshot, 'cpu_percent') else 0.0
                     memory_usage = memory_snapshot.memory_percent
                     
@@ -1802,7 +1802,7 @@ class EnhancedPerformanceManager(PerformanceManager):
         """
         # Get metrics from all subsystems
         metrics_data = self._metrics_collector.get_all_metrics()
-        memory_snapshot = await self._memory_monitor.get_current_snapshot()
+        memory_snapshot = self._memory_monitor.get_current_usage()
         cache_stats = self.get_cache_statistics()
         streaming_stats = self._streaming_manager.get_streaming_statistics()
         
@@ -2782,3 +2782,11 @@ class StreamingManager:
             raise
         finally:
             self._stream_stats[stream_id]["end_time"] = time.time()
+
+# Global performance manager instance
+_performance_manager = None
+
+def get_performance_manager():
+    """Get the global performance manager instance."""
+    global _performance_manager
+    return _performance_manager

@@ -990,7 +990,7 @@ async def _execute_ast_grep_search_cached(input_data: SearchToolInput, ast_grep_
 
 
 @audit_operation("ast_grep_search", SecurityLevel.RESTRICTED)
-async def ast_grep_search(input_data: SearchToolInput, ast_grep_path: Path) -> List[TextContent]:
+async def ast_grep_search_impl(input_data: SearchToolInput, ast_grep_path: Path) -> List[TextContent]:
     """Execute ast-grep search operation with caching, streaming, and comprehensive performance metrics.
     
     Features comprehensive performance tracking including:
@@ -1043,7 +1043,7 @@ async def ast_grep_search(input_data: SearchToolInput, ast_grep_path: Path) -> L
 
 
 @audit_operation("ast_grep_scan", SecurityLevel.RESTRICTED)
-async def ast_grep_scan(input_data: ScanToolInput, ast_grep_path: Path) -> List[TextContent]:
+async def ast_grep_scan_impl(input_data: ScanToolInput, ast_grep_path: Path) -> List[TextContent]:
     """Execute ast-grep scan operation with caching, streaming, and comprehensive performance metrics.
     
     Features comprehensive performance tracking including:
@@ -1620,7 +1620,7 @@ def _format_scan_results_text(result: Dict[str, Any], input_data: ScanToolInput,
 
 
 @audit_operation("ast_grep_run", SecurityLevel.SENSITIVE)
-async def ast_grep_run(input_data: RunToolInput, ast_grep_path: Path) -> List[TextContent]:
+async def ast_grep_run_impl(input_data: RunToolInput, ast_grep_path: Path) -> List[TextContent]:
     """Execute ast-grep run operation for code transformations.
     
     Args:
@@ -2010,7 +2010,7 @@ def _format_run_results_text(result: Dict[str, Any], input_data: RunToolInput) -
 
 
 @audit_operation("call_graph_generate", SecurityLevel.RESTRICTED)
-async def call_graph_generate(input_data: CallGraphInput, ast_grep_path: Path) -> List[TextContent]:
+async def call_graph_generate_impl(input_data: CallGraphInput, ast_grep_path: Path) -> List[TextContent]:
     """Generate call graph for the specified codebase.
     
     Args:
@@ -2045,35 +2045,210 @@ def register_tools(server: Server, ast_grep_path: Path) -> None:
         server: MCP server instance
         ast_grep_path: Path to ast-grep binary
     """
-    # Register ast_grep_search tool
+    
+    # First, register tool schemas
+    @server.list_tools()
+    async def list_ast_grep_tools() -> List[Tool]:
+        """List all available AST-Grep tools."""
+        return [
+            Tool(
+                name="ast_grep_search",
+                description="Search for AST patterns in code using ast-grep",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "pattern": {
+                            "type": "string",
+                            "description": "AST pattern to search for (e.g., 'console.log($GREETING)')",
+                            "minLength": 1,
+                            "maxLength": 8192
+                        },
+                        "language": {
+                            "type": "string",
+                            "description": "Programming language identifier (js, ts, py, rust, etc.)",
+                            "minLength": 1,
+                            "maxLength": 50
+                        },
+                        "path": {
+                            "type": "string",
+                            "description": "File or directory path to search",
+                            "minLength": 1,
+                            "maxLength": 4096
+                        },
+                        "recursive": {
+                            "type": "boolean",
+                            "description": "Search recursively in directories",
+                            "default": True
+                        },
+                        "output_format": {
+                            "type": "string",
+                            "description": "Output format (json/text)",
+                            "enum": ["json", "text"],
+                            "default": "json"
+                        },
+                        "include_globs": {
+                            "type": "array",
+                            "description": "Custom file glob patterns to include (e.g., ['*.test.js', '*.spec.ts'])",
+                            "items": {"type": "string"},
+                            "maxItems": 100
+                        },
+                        "exclude_globs": {
+                            "type": "array",
+                            "description": "File glob patterns to exclude (e.g., ['node_modules/**', '*.min.js'])",
+                            "items": {"type": "string"},
+                            "maxItems": 100
+                        }
+                    },
+                    "required": ["pattern", "language", "path"]
+                }
+            ),
+            Tool(
+                name="ast_grep_scan",
+                description="Scan codebase with predefined rules using ast-grep",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "path": {
+                            "type": "string",
+                            "description": "Directory path to scan",
+                            "minLength": 1,
+                            "maxLength": 4096
+                        },
+                        "rules_config": {
+                            "type": "string",
+                            "description": "Path to sgconfig.yml or custom rules",
+                            "maxLength": 4096
+                        },
+                        "output_format": {
+                            "type": "string",
+                            "description": "Output format (json/text)",
+                            "enum": ["json", "text"],
+                            "default": "json"
+                        }
+                    },
+                    "required": ["path"]
+                }
+            ),
+            Tool(
+                name="ast_grep_run",
+                description="Run one-time queries with pattern and rewrite capabilities",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "pattern": {
+                            "type": "string",
+                            "description": "AST pattern for matching",
+                            "minLength": 1,
+                            "maxLength": 8192
+                        },
+                        "rewrite": {
+                            "type": "string",
+                            "description": "Rewrite pattern for transformations",
+                            "maxLength": 8192
+                        },
+                        "language": {
+                            "type": "string",
+                            "description": "Programming language identifier",
+                            "minLength": 1,
+                            "maxLength": 50
+                        },
+                        "path": {
+                            "type": "string",
+                            "description": "File or directory path",
+                            "minLength": 1,
+                            "maxLength": 4096
+                        },
+                        "dry_run": {
+                            "type": "boolean",
+                            "description": "Preview changes without applying them",
+                            "default": True
+                        },
+                        "output_format": {
+                            "type": "string",
+                            "description": "Output format (json/text)",
+                            "enum": ["json", "text"],
+                            "default": "json"
+                        }
+                    },
+                    "required": ["pattern", "language", "path"]
+                }
+            ),
+            Tool(
+                name="call_graph_generate",
+                description="Generate call graph for the specified codebase",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "path": {
+                            "type": "string",
+                            "description": "Directory path to analyze",
+                            "minLength": 1,
+                            "maxLength": 4096
+                        },
+                        "languages": {
+                            "type": "array",
+                            "description": "List of languages to include (max 20 languages)",
+                            "items": {"type": "string"},
+                            "maxItems": 20
+                        },
+                        "include_external": {
+                            "type": "boolean",
+                            "description": "Include external library calls",
+                            "default": False
+                        }
+                    },
+                    "required": ["path"]
+                }
+            )
+        ]
+    
+    # Then, register tool implementations
     @server.call_tool()
-    async def ast_grep_search_tool(arguments: Dict[str, Any]) -> List[TextContent]:
+    async def ast_grep_search(arguments: Dict[str, Any]) -> List[TextContent]:
         """Search for AST patterns in code using ast-grep."""
         input_data = SearchToolInput(**arguments)
-        return await ast_grep_search(input_data, ast_grep_path)
+        return await ast_grep_search_tool_impl(input_data, ast_grep_path)
     
-    # Register ast_grep_scan tool
     @server.call_tool()
-    async def ast_grep_scan_tool(arguments: Dict[str, Any]) -> List[TextContent]:
+    async def ast_grep_scan(arguments: Dict[str, Any]) -> List[TextContent]:
         """Scan codebase with predefined rules using ast-grep."""
         input_data = ScanToolInput(**arguments)
-        return await ast_grep_scan(input_data, ast_grep_path)
+        return await ast_grep_scan_tool_impl(input_data, ast_grep_path)
     
-    # Register ast_grep_run tool
     @server.call_tool()
-    async def ast_grep_run_tool(arguments: Dict[str, Any]) -> List[TextContent]:
+    async def ast_grep_run(arguments: Dict[str, Any]) -> List[TextContent]:
         """Run one-time queries with pattern and rewrite capabilities."""
         input_data = RunToolInput(**arguments)
-        return await ast_grep_run(input_data, ast_grep_path)
+        return await ast_grep_run_tool_impl(input_data, ast_grep_path)
     
-    # Register call_graph_generate tool
     @server.call_tool()
-    async def call_graph_generate_tool(arguments: Dict[str, Any]) -> List[TextContent]:
+    async def call_graph_generate(arguments: Dict[str, Any]) -> List[TextContent]:
         """Generate call graph for the specified codebase."""
         input_data = CallGraphInput(**arguments)
-        return await call_graph_generate(input_data, ast_grep_path)
+        return await call_graph_generate_tool_impl(input_data, ast_grep_path)
     
-    logger.info("All AST-Grep tools registered successfully")
+    logger.info("All AST-Grep tools registered successfully with schemas and implementations")
+
+
+# Tool implementation functions to avoid conflicts with MCP handlers
+async def ast_grep_search_tool_impl(input_data: SearchToolInput, ast_grep_path: Path) -> List[TextContent]:
+    """Implementation of ast_grep_search tool."""
+    return await ast_grep_search_impl(input_data, ast_grep_path)
+
+
+async def ast_grep_scan_tool_impl(input_data: ScanToolInput, ast_grep_path: Path) -> List[TextContent]:
+    """Implementation of ast_grep_scan tool."""
+    return await ast_grep_scan_impl(input_data, ast_grep_path)
+
+
+async def ast_grep_run_tool_impl(input_data: RunToolInput, ast_grep_path: Path) -> List[TextContent]:
+    """Implementation of ast_grep_run tool."""
+    return await ast_grep_run_impl(input_data, ast_grep_path)
+
+
+async def call_graph_generate_tool_impl(input_data: CallGraphInput, ast_grep_path: Path) -> List[TextContent]:
+    """Implementation of call_graph_generate tool."""
+    return await call_graph_generate_impl(input_data, ast_grep_path)
 
 
 def _discover_sgconfig_file(start_path: Path, config_filename: str = "sgconfig.yml") -> Optional[Path]:
