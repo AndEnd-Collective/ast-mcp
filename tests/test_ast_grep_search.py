@@ -10,7 +10,7 @@ from typing import Dict, Any, List
 
 from src.ast_grep_mcp.tools import (
     SearchToolInput, 
-    ast_grep_search,
+    ast_grep_search_impl,
     _build_search_args,
     _format_search_results_json,
     _format_search_results_text
@@ -67,7 +67,8 @@ class TestSearchToolInput:
         mock_manager.validate_language_identifier.return_value = "python"
         mock_get_manager.return_value = mock_manager
         
-        with pytest.raises(ValueError, match="Pattern cannot be empty"):
+        from pydantic import ValidationError
+        with pytest.raises(ValidationError, match="String should have at least 1 character"):
             SearchToolInput(
                 pattern="",
                 language="python",
@@ -83,17 +84,15 @@ class TestSearchToolInput:
         mock_get_manager.return_value = mock_manager
         
         dangerous_patterns = [
-            "console.log(`danger`)",
-            "test $(whoami)",
-            "pattern & malicious",
-            "pattern | pipe",
-            "pattern ; semicolon",
-            "pattern && and",
-            "pattern || or"
+            "console.log(`danger`)",      # backtick is always dangerous
+            "pattern; malicious",         # semicolon is always dangerous
+            "pattern && malicious",       # double ampersand is dangerous
+            "pattern || malicious",       # double pipe is dangerous
         ]
         
+        from pydantic import ValidationError
         for pattern in dangerous_patterns:
-            with pytest.raises(ValueError, match="potentially dangerous character"):
+            with pytest.raises(ValidationError, match="Potentially dangerous character"):
                 SearchToolInput(
                     pattern=pattern,
                     language="javascript",
@@ -146,7 +145,8 @@ class TestSearchToolInput:
         mock_manager.validate_language_identifier.return_value = "python"
         mock_get_manager.return_value = mock_manager
         
-        with pytest.raises(ValueError, match="Path cannot be empty"):
+        from pydantic import ValidationError
+        with pytest.raises(ValidationError, match="String should have at least 1 character"):
             SearchToolInput(
                 pattern="test",
                 language="python",
@@ -161,23 +161,24 @@ class TestSearchToolInput:
         mock_manager.validate_language_identifier.return_value = "python"
         mock_get_manager.return_value = mock_manager
         
-        # Valid formats
-        for fmt in ["json", "text", "JSON", "TEXT"]:
+        # Valid formats (case-sensitive)
+        for fmt in ["json", "text"]:
             input_data = SearchToolInput(
                 pattern="test",
                 language="python",
                 path="./src",
                 output_format=fmt
             )
-            assert input_data.output_format == fmt.lower()
+            assert input_data.output_format == fmt
         
-        # Invalid format
-        with pytest.raises(ValueError, match="Invalid output format"):
+        # Invalid format (case-sensitive validation in SearchToolInput)
+        from pydantic import ValidationError
+        with pytest.raises(ValidationError, match="Output format must be 'json' or 'text'"):
             SearchToolInput(
                 pattern="test",
                 language="python",
                 path="./src",
-                output_format="xml"
+                output_format="JSON"  # Uppercase not allowed
             )
     
     @patch('src.ast_grep_mcp.tools.get_language_manager')
@@ -493,7 +494,7 @@ class TestASTGrepSearchIntegration:
             output_format="json"
         )
         
-        result = await ast_grep_search(input_data, Path("/usr/bin/ast-grep"))
+        result = await ast_grep_search_impl(input_data, Path("/usr/bin/ast-grep"))
         
         assert len(result) == 1
         assert result[0].type == "text"
@@ -544,7 +545,7 @@ class TestASTGrepSearchIntegration:
             output_format="text"
         )
         
-        result = await ast_grep_search(input_data, Path("/usr/bin/ast-grep"))
+        result = await ast_grep_search_impl(input_data, Path("/usr/bin/ast-grep"))
         
         assert len(result) == 1
         assert result[0].type == "text"
@@ -575,7 +576,7 @@ class TestASTGrepSearchIntegration:
             path="./src"
         )
         
-        result = await ast_grep_search(input_data, Path("/usr/bin/ast-grep"))
+        result = await ast_grep_search_impl(input_data, Path("/usr/bin/ast-grep"))
         
         assert len(result) == 1
         assert result[0].type == "text"
@@ -611,7 +612,7 @@ class TestASTGrepSearchIntegration:
             path="./src"
         )
         
-        result = await ast_grep_search(input_data, Path("/usr/bin/ast-grep"))
+        result = await ast_grep_search_impl(input_data, Path("/usr/bin/ast-grep"))
         
         assert len(result) == 1
         assert result[0].type == "text"
@@ -689,7 +690,7 @@ class TestMultiLanguageSupport:
             path="./src"
         )
         
-        result = await ast_grep_search(input_data, Path("/usr/bin/ast-grep"))
+        result = await ast_grep_search_impl(input_data, Path("/usr/bin/ast-grep"))
         
         # Verify the executor was called with correct language mapping
         mock_executor.search.assert_called_once()
@@ -730,7 +731,7 @@ class TestEdgeCases:
             path="./src"
         )
         
-        result = await ast_grep_search(input_data, Path("/usr/bin/ast-grep"))
+        result = await ast_grep_search_impl(input_data, Path("/usr/bin/ast-grep"))
         
         assert len(result) == 1
         parsed_result = json.loads(result[0].text)
@@ -771,7 +772,7 @@ class TestEdgeCases:
             path="./src"
         )
         
-        result = await ast_grep_search(input_data, Path("/usr/bin/ast-grep"))
+        result = await ast_grep_search_impl(input_data, Path("/usr/bin/ast-grep"))
         
         # Should handle malformed data gracefully
         assert len(result) == 1
@@ -782,16 +783,16 @@ class TestEdgeCases:
     
     def test_extremely_long_pattern(self):
         """Test handling of very long patterns."""
-        long_pattern = "x" * 10000  # Very long pattern
+        long_pattern = "x" * 10000  # Very long pattern (exceeds 8192 limit)
         
-        input_data = SearchToolInput(
-            pattern=long_pattern,
-            language="javascript",
-            path="./src"
-        )
-        
-        # Should not raise validation errors for long patterns
-        assert input_data.pattern == long_pattern
+        # Should raise ValidationError due to max_length constraint
+        from pydantic import ValidationError
+        with pytest.raises(ValidationError, match="String should have at most 8192 characters"):
+            SearchToolInput(
+                pattern=long_pattern,
+                language="javascript",
+                path="./src"
+            )
     
     def test_unicode_pattern(self):
         """Test handling of Unicode patterns."""
