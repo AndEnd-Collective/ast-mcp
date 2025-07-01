@@ -1,0 +1,1 @@
+"""AST-Grep MCP Server package.""" 
