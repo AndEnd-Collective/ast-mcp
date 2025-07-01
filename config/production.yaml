@@ -1,0 +1,128 @@
+# AST-Grep MCP Server - Production Configuration
+# This is a template configuration file for production environment
+
+# Basic server settings
+name: "ast-grep-mcp"
+version: "1.0.0"
+environment: "production"
+debug: false
+shutdown_timeout: 60.0
+force_shutdown_timeout: 30.0
+
+# Security configuration (strict for production)
+security:
+  enable_security: true
+  enable_audit_logging: true
+  enable_rate_limiting: true
+  enable_input_validation: true
+  enable_path_traversal_protection: true
+  enable_command_injection_protection: true
+  
+  rate_limit_requests: 100
+  rate_limit_window: 60
+  
+  max_input_size: 524288  # 512KB (stricter limit)
+  max_output_size: 5242880  # 5MB (stricter limit)
+  
+  allowed_paths: []  # Define specific allowed paths in production
+  blocked_paths: 
+    - "/etc"
+    - "/proc"
+    - "/sys"
+    - "/dev"
+    - "/root"
+
+# Performance configuration (optimized for production)
+performance:
+  enable_performance: true
+  enable_caching: true
+  enable_memory_monitoring: true
+  enable_metrics_collection: true
+  
+  cache_ttl: 600  # Longer TTL for production
+  cache_max_size: 2000  # Larger cache for production
+  
+  memory_warning_threshold: 80.0  # More conservative
+  memory_critical_threshold: 90.0  # More conservative
+  
+  cpu_warning_threshold: 70.0  # More conservative
+  cpu_critical_threshold: 85.0  # More conservative
+  
+  max_execution_time: 30
+  max_concurrent_requests: 20  # Higher concurrency for production
+
+# Monitoring configuration (comprehensive for production)
+monitoring:
+  enable_monitoring: true
+  enable_health_checks: true
+  enable_system_monitoring: true
+  enable_dependency_checks: true
+  enable_alerting: true
+  enable_detailed_diagnostics: false  # Disable detailed diagnostics for performance
+  
+  health_check_interval: 15  # More frequent health checks
+  max_health_history: 200  # Larger history for production
+  dependency_check_timeout: 5  # Shorter timeout for production
+  
+  alert_cooldown: 300
+  max_alerts: 200
+
+# Logging configuration (balanced for production)
+logging:
+  enable_enhanced_logging: true
+  log_level: "WARNING"  # Less verbose for production
+  log_format: "json"  # Structured logging for production
+  enable_correlation_ids: true
+  enable_performance_logging: false  # Disable for performance
+  enable_audit_logging: true
+  
+  enable_file_logging: true
+  log_file_path: "/var/log/ast-grep-mcp/ast-grep-mcp.log"
+  log_file_max_size: 52428800  # 50MB
+  log_file_backup_count: 10
+  
+  enable_console_logging: false  # Disable console logging for production
+  console_log_level: null
+  
+  enable_sensitive_data_filtering: true
+  sensitive_patterns:
+    - '(?i)(password|secret|key|token|credential)[\s]*[:=][\s]*["\']?([^"\'\s]+)'
+    - '(?i)(api[_-]?key)[\s]*[:=][\s]*["\']?([^"\'\s]+)'
+    - '(?i)(auth[_-]?token)[\s]*[:=][\s]*["\']?([^"\'\s]+)'
+    - '(?i)(bearer[\s]+)([a-zA-Z0-9\-._~+/]+=*)'
+    - '(?i)(ssh-rsa[\s]+[a-zA-Z0-9+/=]+)'
+
+# AST-Grep configuration (production optimized)
+ast_grep:
+  ast_grep_path: "/usr/local/bin/ast-grep"  # Explicit path for production
+  auto_detect_binary: false  # Don't auto-detect in production
+  
+  default_timeout: 20  # Shorter timeout for production
+  max_timeout: 60  # Strict limit for production
+  
+  supported_languages:
+    - "python"
+    - "javascript"
+    - "typescript"
+    - "java"
+    - "c"
+    - "cpp"
+    - "rust"
+    - "go"
+    - "ruby"
+    - "php"
+    - "swift"
+    - "kotlin"
+    - "scala"
+    - "csharp"
+    - "html"
+    - "css"
+    - "json"
+    - "yaml"
+    - "xml"
+    - "sql"
+    - "bash"
+    - "powershell"
+  
+  max_pattern_length: 8000  # Reasonable limit for production
+  max_results: 1000  # Production limit 

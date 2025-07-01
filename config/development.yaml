@@ -1,0 +1,121 @@
+# AST-Grep MCP Server - Development Configuration
+# This is a template configuration file for development environment
+
+# Basic server settings
+name: "ast-grep-mcp"
+version: "1.0.0"
+environment: "development"
+debug: true
+shutdown_timeout: 30.0
+force_shutdown_timeout: 10.0
+
+# Security configuration (relaxed for development)
+security:
+  enable_security: false
+  enable_audit_logging: true
+  enable_rate_limiting: false
+  enable_input_validation: true
+  enable_path_traversal_protection: true
+  enable_command_injection_protection: true
+  
+  rate_limit_requests: 1000
+  rate_limit_window: 60
+  
+  max_input_size: 1048576  # 1MB
+  max_output_size: 10485760  # 10MB
+  
+  allowed_paths: []
+  blocked_paths: []
+
+# Performance configuration (optimized for development)
+performance:
+  enable_performance: true
+  enable_caching: false  # Disable caching for development
+  enable_memory_monitoring: true
+  enable_metrics_collection: true
+  
+  cache_ttl: 300
+  cache_max_size: 100  # Smaller cache for development
+  
+  memory_warning_threshold: 90.0
+  memory_critical_threshold: 95.0
+  
+  cpu_warning_threshold: 85.0
+  cpu_critical_threshold: 95.0
+  
+  max_execution_time: 60  # Longer timeout for debugging
+  max_concurrent_requests: 5
+
+# Monitoring configuration
+monitoring:
+  enable_monitoring: true
+  enable_health_checks: true
+  enable_system_monitoring: true
+  enable_dependency_checks: true
+  enable_alerting: false  # Disable alerting in development
+  enable_detailed_diagnostics: true
+  
+  health_check_interval: 30
+  max_health_history: 50  # Smaller history for development
+  dependency_check_timeout: 10
+  
+  alert_cooldown: 300
+  max_alerts: 50
+
+# Logging configuration (verbose for development)
+logging:
+  enable_enhanced_logging: true
+  log_level: "DEBUG"
+  log_format: "structured"
+  enable_correlation_ids: true
+  enable_performance_logging: true
+  enable_audit_logging: true
+  
+  enable_file_logging: true
+  log_file_path: "logs/ast-grep-mcp-dev.log"
+  log_file_max_size: 10485760  # 10MB
+  log_file_backup_count: 3
+  
+  enable_console_logging: true
+  console_log_level: "DEBUG"
+  
+  enable_sensitive_data_filtering: true
+  sensitive_patterns:
+    - '(?i)(password|secret|key|token|credential)[\s]*[:=][\s]*["\']?([^"\'\s]+)'
+    - '(?i)(api[_-]?key)[\s]*[:=][\s]*["\']?([^"\'\s]+)'
+    - '(?i)(auth[_-]?token)[\s]*[:=][\s]*["\']?([^"\'\s]+)'
+
+# AST-Grep configuration
+ast_grep:
+  ast_grep_path: null  # Auto-detect
+  auto_detect_binary: true
+  
+  default_timeout: 30
+  max_timeout: 120  # Shorter for development
+  
+  supported_languages:
+    - "python"
+    - "javascript"
+    - "typescript"
+    - "java"
+    - "c"
+    - "cpp"
+    - "rust"
+    - "go"
+    - "ruby"
+    - "php"
+    - "swift"
+    - "kotlin"
+    - "scala"
+    - "csharp"
+    - "html"
+    - "css"
+    - "json"
+    - "yaml"
+    - "xml"
+    - "sql"
+    - "bash"
+    - "powershell"
+  
+  max_pattern_length: 5000  # Smaller for development testing
+  max_results: 500  # Smaller for development testing 
