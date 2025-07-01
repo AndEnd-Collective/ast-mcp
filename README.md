@@ -1,254 +1,397 @@
 # AST-Grep MCP Server
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![MCP](https://img.shields.io/badge/MCP-Compatible-green.svg)](https://modelcontextprotocol.io/)
-
-A powerful **Model Context Protocol (MCP) Server** that wraps the open-source [ast-grep](https://ast-grep.github.io/) tool, providing AI assistants with advanced semantic code search and analysis capabilities.
+A powerful [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server that provides AI assistants with semantic code search and analysis capabilities using [ast-grep](https://ast-grep.github.io/).
 
 ## 🚀 Features
 
 ### Core Capabilities
-- **🔍 Semantic Code Search**: Find code patterns across multiple programming languages using AST-based queries
-- **📊 Code Scanning**: Comprehensive codebase analysis with customizable rules and patterns  
-- **🏃‍♂️ Rule Execution**: Run predefined or custom ast-grep rules against codebases
-- **📈 Call Graph Generation**: Visualize function dependencies and call relationships
+- **Semantic Code Search**: Advanced AST-based pattern matching across 20+ programming languages
+- **Code Analysis**: Function detection, call graph generation, and relationship mapping
+- **Rule-Based Scanning**: Custom security and quality rule enforcement
+- **Multi-Language Support**: JavaScript, TypeScript, Python, Java, Rust, Go, C/C++, and more
 
-### Language Support
-Supports **20+ programming languages** including:
-- **Web**: JavaScript, TypeScript, HTML, CSS, JSON
-- **Systems**: C, C++, Rust, Go
-- **Enterprise**: Java, C#, Kotlin, Scala
-- **Scripting**: Python, Ruby, PHP, Lua
-- **Mobile**: Swift, Dart
-- **Data**: SQL, YAML
-- **And more**: Bash, Haskell, etc.
+### Enterprise-Grade Features
+- **🔐 Security First**: Input validation, path traversal protection, rate limiting
+- **📊 Performance Monitoring**: Comprehensive metrics, caching, resource management
+- **🛠️ Configuration Management**: Pydantic-based validation, multi-environment support
+- **📝 Audit Logging**: Detailed operation tracking and security event logging
+- **🔄 Health Monitoring**: Real-time health checks and status reporting
 
-### MCP Integration
-- **Secure**: Sandboxed execution with configurable resource limits
-- **Async**: Non-blocking operations for responsive AI interactions  
-- **Validated**: Strict input validation using Pydantic models
-- **Documented**: Comprehensive resource documentation and examples
+### Advanced Functionality
+- **Enhanced Configuration System**: YAML/JSON config files with environment variable support
+- **Migration Tools**: Seamless upgrade path from legacy configurations
+- **Multi-Environment Profiles**: Development, staging, and production configurations
+- **Hot Reload**: Dynamic configuration updates without restart
+- **Comprehensive Documentation**: Deployment, configuration, API, and troubleshooting guides
 
-## 📋 Prerequisites
+## 📋 Quick Start
 
-1. **Python 3.8+** with pip
-2. **ast-grep binary** installed via one of:
+### Prerequisites
+- Python 3.8+
+- [ast-grep](https://ast-grep.github.io/) installed and accessible in PATH
+
+### Installation
+
+1. **Install ast-grep**:
    ```bash
-   # Via Cargo (Rust)
+   # Via Cargo
    cargo install ast-grep
    
-   # Via npm  
+   # Via npm
    npm install -g @ast-grep/cli
    
    # Via Homebrew (macOS)
    brew install ast-grep
-   
-   # Via package manager (Linux)
-   # See: https://ast-grep.github.io/guide/quick-start.html
    ```
 
-## 🛠️ Installation
+2. **Install the MCP server**:
+   ```bash
+   git clone https://github.com/your-org/ast-grep-mcp.git
+   cd ast-grep-mcp
+   pip install -e .
+   ```
 
-### From Source
-```bash
-# Clone the repository
-git clone https://github.com/example/ast-grep-mcp.git
-cd ast-grep-mcp
+3. **Basic configuration**:
+   ```bash
+   # Create development configuration
+   python scripts/config_manager.py create-template development --output config.yaml
+   
+   # Validate configuration
+   python scripts/config_manager.py validate --config config.yaml
+   ```
 
-# Install in development mode
-pip install -e .
+### Using with Cursor
 
-# Or install with development dependencies
-pip install -e .[dev]
-```
-
-### For Development
-```bash
-# Install development dependencies
-pip install -e .[dev]
-
-# Set up pre-commit hooks
-pre-commit install
-
-# Run tests
-pytest
-
-# Run type checking
-mypy src/
-
-# Format code
-black src/ tests/
-isort src/ tests/
-```
-
-## 🚀 Usage
-
-### As MCP Server
-The server can be integrated with MCP-compatible AI assistants:
+Add to your `.cursor/mcp.json`:
 
 ```json
 {
   "mcpServers": {
     "ast-grep": {
-      "command": "ast-grep-mcp",
-      "args": [],
+      "command": "python",
+      "args": ["-m", "ast_grep_mcp.server"],
       "env": {
-        "AST_GREP_PATH": "/path/to/ast-grep"
+        "AST_GREP_LOGGING__LOG_LEVEL": "INFO"
       }
     }
   }
 }
 ```
 
-### Available Tools
+## 🛠️ MCP Tools
 
-#### 1. Semantic Search (`ast_grep_search`)
-Find code patterns using AST-based queries:
+### Core Search Tools
+- **`ast_grep_search`**: Semantic code pattern search
+- **`ast_grep_scan`**: Rule-based code scanning
+- **`ast_grep_run`**: Custom AST-Grep configuration execution
 
-```json
+### Analysis Tools
+- **`call_graph_generate`**: Function call dependency analysis
+- **`detect_functions`**: Function definition detection
+- **`detect_calls`**: Function call pattern analysis
+
+### Example Usage
+
+```javascript
+// Find all function definitions
 {
-  "pattern": "function $NAME($ARGS) { $BODY }",
-  "language": "javascript",
-  "paths": ["src/"],
-  "limit": 10
+  "name": "ast_grep_search",
+  "arguments": {
+    "pattern": "function $NAME($ARGS) { $BODY }",
+    "language": "javascript",
+    "paths": ["src/"],
+    "limit": 50
+  }
+}
+
+// Security scan
+{
+  "name": "ast_grep_scan",
+  "arguments": {
+    "rule_path": "security-rules.yml",
+    "paths": ["src/", "lib/"],
+    "severity": "warning"
+  }
 }
 ```
 
-#### 2. Code Scanning (`ast_grep_scan`) 
-Scan codebase with predefined rules:
+## 📚 Comprehensive Documentation
 
-```json
-{
-  "rule_path": "rules/security.yml",
-  "paths": ["src/", "lib/"],
-  "output_format": "json"
-}
-```
+### 📖 User Guides
+- **[Configuration Guide](docs/CONFIGURATION.md)**: Complete configuration reference with examples
+- **[Deployment Guide](docs/DEPLOYMENT.md)**: Production deployment strategies and best practices
+- **[API Documentation](docs/API.md)**: Detailed API reference with examples and schemas
+- **[Troubleshooting Guide](docs/TROUBLESHOOTING.md)**: Common issues and solutions
 
-#### 3. Rule Execution (`ast_grep_run`)
-Execute custom ast-grep configurations:
-
-```json
-{
-  "config_path": "ast-grep.yml",
-  "paths": ["src/"],
-  "fix": false
-}
-```
-
-#### 4. Call Graph Generation (`call_graph_generate`)
-Generate function call dependency graphs:
-
-```json
-{
-  "entry_points": ["src/main.py"],
-  "language": "python", 
-  "max_depth": 5,
-  "include_external": false
-}
-```
-
-### Available Resources
-
-- **📚 Language Support** (`ast-grep://languages`): Complete list of supported languages
-- **🔧 Pattern Syntax** (`ast-grep://patterns`): AST pattern syntax documentation  
-- **💡 Examples** (`ast-grep://examples`): Usage examples and common patterns
-- **📋 Call Graph Schema** (`ast-grep://schemas/call-graph`): JSON schema for call graph output
+### 🔧 Development Resources
+- **[Scripts & Tools](scripts/)**: Configuration management and utilities
+- **[Example Configurations](config/)**: Templates for different environments
+- **[Comprehensive Tests](tests/)**: Full test suite with coverage reporting
 
 ## ⚙️ Configuration
 
-### Environment Variables
+The server supports a sophisticated configuration system:
+
+### Configuration Sources (Priority Order)
+1. **Command Line Arguments**: `--config`, `--debug`, etc.
+2. **Environment Variables**: `AST_GREP_SECTION__SETTING`
+3. **Configuration Files**: YAML, JSON, or TOML format
+4. **Default Values**: Built-in sensible defaults
+
+### Quick Configuration Examples
+
+**Development Environment**:
+```yaml
+name: "ast-grep-mcp"
+environment: "development"
+debug: true
+
+security:
+  enable_security: false
+  enable_rate_limiting: false
+
+performance:
+  enable_caching: false
+  max_concurrent_requests: 10
+```
+
+**Production Environment**:
+```yaml
+name: "ast-grep-mcp"
+environment: "production"
+debug: false
+
+security:
+  enable_security: true
+  enable_rate_limiting: true
+  rate_limit_requests: 100
+  rate_limit_window: 60
+
+performance:
+  enable_caching: true
+  max_concurrent_requests: 5
+```
+
+### Configuration Management CLI
+
 ```bash
-# AST-Grep binary path (auto-detected if not set)
-AST_GREP_PATH=/usr/local/bin/ast-grep
+# Create configuration template
+python scripts/config_manager.py create-template production --output config.yaml
 
-# Resource limits
-MAX_FILE_SIZE=10485760        # 10MB max file size
-MAX_SEARCH_RESULTS=1000       # Max search results
-EXECUTION_TIMEOUT=30          # 30 second timeout
+# Validate configuration
+python scripts/config_manager.py validate --config config.yaml
 
-# Logging
-LOG_LEVEL=INFO               # DEBUG, INFO, WARNING, ERROR
-LOG_FILE=ast-grep-mcp.log    # Log file path
+# Migrate from legacy configuration
+python scripts/config_manager.py migrate --output new-config.yaml
+
+# System health check
+python scripts/config_manager.py health
 ```
 
-### Security
-- **Path Traversal Protection**: Prevents access outside specified directories
-- **Resource Limits**: Configurable limits on file size, results, and execution time
-- **Input Validation**: Strict validation using Pydantic models
-- **Sandboxed Execution**: ast-grep runs in controlled environment
+## 🔒 Security Features
 
-## 🔧 Development
+### Input Validation & Protection
+- **Pattern Validation**: AST pattern syntax validation
+- **Path Traversal Protection**: Configurable allowed/blocked paths
+- **Input Size Limits**: Configurable maximum input/output sizes
+- **Command Injection Prevention**: Safe parameter handling
 
-### Project Structure
+### Access Control & Monitoring
+- **Rate Limiting**: Configurable per-client request limits
+- **Audit Logging**: Comprehensive security event tracking
+- **Resource Monitoring**: Memory and CPU usage tracking
+- **Health Checks**: System status and availability monitoring
+
+### Configuration Example
+```yaml
+security:
+  enable_security: true
+  enable_rate_limiting: true
+  rate_limit_requests: 100
+  rate_limit_window: 60
+  
+  max_input_size: 1048576  # 1MB
+  max_output_size: 10485760  # 10MB
+  
+  allowed_paths: ["/workspace", "/home/user/projects"]
+  blocked_paths: ["/etc", "/proc", "/sys"]
 ```
-ast-grep-mcp/
-├── src/ast_grep_mcp/          # Main package
-│   ├── __init__.py           # Package initialization
-│   ├── server.py             # MCP server implementation  
-│   ├── tools.py              # MCP tool implementations
-│   ├── resources.py          # MCP resource providers
-│   └── utils.py              # Utilities and helpers
-├── tests/                    # Test suite
-├── docs/                     # Documentation
-├── pyproject.toml           # Project configuration
-└── README.md                # This file
+
+## 📊 Performance & Monitoring
+
+### Performance Features
+- **Smart Caching**: Configurable result caching for repeated queries
+- **Resource Limits**: Memory and execution time controls
+- **Concurrent Request Management**: Configurable concurrency limits
+- **Performance Metrics**: Detailed timing and resource usage tracking
+
+### Monitoring Capabilities
+- **Health Endpoints**: Real-time system status checks
+- **Performance Metrics**: Request timing, memory usage, cache hit rates
+- **Audit Trails**: Comprehensive operation logging
+- **Error Tracking**: Detailed error reporting and analysis
+
+### Configuration Example
+```yaml
+performance:
+  enable_performance: true
+  enable_caching: true
+  cache_ttl: 600
+  
+  max_concurrent_requests: 10
+  max_execution_time: 30
+  memory_warning_threshold: 70.0
+  memory_critical_threshold: 90.0
+
+monitoring:
+  enable_health_checks: true
+  health_check_interval: 30
+  enable_metrics_collection: true
 ```
 
-### Development Workflow
-1. **Setup**: `pip install -e .[dev]`
-2. **Code**: Follow type hints and docstrings
-3. **Test**: `pytest` with coverage
-4. **Lint**: `black`, `isort`, `flake8`, `mypy`
-5. **Security**: `bandit` security scanning
-6. **Commit**: Pre-commit hooks ensure quality
+## 🧪 Testing
 
-### Testing
+### Comprehensive Test Suite
+- **Unit Tests**: Individual component testing
+- **Integration Tests**: End-to-end functionality testing
+- **Performance Tests**: Load and stress testing
+- **Security Tests**: Validation and protection testing
+
+### Running Tests
 ```bash
 # Run all tests
-pytest
+python -m pytest tests/
 
-# With coverage
-pytest --cov=src --cov-report=html
+# Run specific test categories
+python -m pytest tests/test_ast_grep_search.py -v
+python -m pytest tests/test_configuration.py -v
+python -m pytest tests/test_security.py -v
 
-# Specific test categories  
-pytest -m unit          # Unit tests only
-pytest -m integration   # Integration tests only
-pytest -m "not slow"    # Skip slow tests
+# Run with coverage
+python -m pytest tests/ --cov=src/ast_grep_mcp --cov-report=html
+
+# Performance testing
+python -m pytest tests/test_performance.py --benchmark-only
 ```
+
+### Validation Scripts
+```bash
+# Validate core functionality
+python scripts/validate_function_detection.py
+python scripts/validate_call_graph_generation.py
+python scripts/validate_call_detection.py
+```
+
+## 🚀 Deployment
+
+### Deployment Options
+- **Development**: Local testing and development
+- **Staging**: Pre-production validation environment
+- **Production**: High-availability production deployment
+- **Containerized**: Docker and Kubernetes deployment
+
+### Quick Deployment
+```bash
+# Create production configuration
+python scripts/config_manager.py create-template production --output production.yaml
+
+# Validate deployment
+python scripts/config_manager.py validate --config production.yaml
+
+# Start server
+python -m ast_grep_mcp.server --config production.yaml
+```
+
+For detailed deployment instructions, see the [Deployment Guide](docs/DEPLOYMENT.md).
 
 ## 🤝 Contributing
 
-1. **Fork** the repository
-2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
-3. **Commit** your changes (`git commit -m 'Add amazing feature'`)
-4. **Push** to the branch (`git push origin feature/amazing-feature`)
-5. **Open** a Pull Request
+### Development Setup
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/your-org/ast-grep-mcp.git
+   cd ast-grep-mcp
+   ```
 
-### Code Standards
-- **Type Safety**: Full type annotations required
-- **Documentation**: Docstrings for all public APIs
-- **Testing**: Comprehensive test coverage
-- **Code Quality**: Black formatting, import sorting
-- **Security**: Bandit security scanning
+2. **Set up development environment**:
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   pip install -e .[dev]
+   ```
 
-## 📚 Resources
+3. **Install pre-commit hooks**:
+   ```bash
+   pre-commit install
+   ```
 
-- **AST-Grep Documentation**: https://ast-grep.github.io/
-- **Model Context Protocol**: https://modelcontextprotocol.io/
-- **Python Packaging**: https://packaging.python.org/
+4. **Run tests**:
+   ```bash
+   python -m pytest tests/ -v
+   ```
 
-## 📝 License
+### Code Quality
+- **Type Safety**: Full type hints with mypy validation
+- **Code Formatting**: Black and isort for consistent formatting
+- **Linting**: Flake8 for code quality checks
+- **Security**: Bandit for security vulnerability scanning
+
+## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## 🆘 Support & Troubleshooting
 
-- **[ast-grep](https://ast-grep.github.io/)** - The powerful AST-based code search tool
-- **[Model Context Protocol](https://modelcontextprotocol.io/)** - The protocol enabling AI-tool integration
-- **Open Source Community** - For the amazing tools and libraries that make this possible
+### Getting Help
+- **📖 Documentation**: Comprehensive guides in the [docs/](docs/) directory
+- **🐛 Issues**: Report bugs and feature requests on GitHub
+- **💬 Discussions**: Community discussions and questions
+- **🔧 Troubleshooting**: Detailed [troubleshooting guide](docs/TROUBLESHOOTING.md)
+
+### Quick Troubleshooting
+```bash
+# Check system health
+python scripts/config_manager.py health
+
+# Validate configuration
+python scripts/config_manager.py validate --config config.yaml --verbose
+
+# Test ast-grep integration
+ast-grep --version
+python -c "import ast_grep_mcp; print('Package installed successfully')"
+
+# Debug with detailed logging
+AST_GREP_LOGGING__LOG_LEVEL=DEBUG python -m ast_grep_mcp.server
+```
+
+For comprehensive troubleshooting, see the [Troubleshooting Guide](docs/TROUBLESHOOTING.md).
 
 ---
 
-**Built with ❤️ for the AI and developer community** 
+## 🏗️ Architecture
+
+### Core Components
+- **🧠 MCP Server**: Protocol implementation and tool orchestration
+- **🔍 AST-Grep Integration**: Pattern matching and code analysis
+- **⚙️ Configuration System**: Pydantic-based validation and management
+- **🔒 Security Layer**: Input validation and access control
+- **📊 Performance System**: Monitoring and optimization
+- **📝 Logging System**: Comprehensive audit and debug logging
+
+### Data Flow
+```
+AI Assistant → MCP Client → AST-Grep MCP Server → ast-grep binary → Code Analysis → Results
+```
+
+### Key Design Principles
+- **Type Safety**: Comprehensive Pydantic models for all data structures
+- **Security First**: Multiple layers of input validation and protection
+- **Performance Optimized**: Caching, resource limits, and efficient processing
+- **Highly Configurable**: Flexible configuration system for all environments
+- **Observable**: Comprehensive logging and monitoring capabilities
+
+---
+
+**Built with ❤️ for AI-powered code analysis**
+
+*AST-Grep MCP Server - Empowering AI assistants with semantic code understanding* 
