@@ -1017,7 +1017,7 @@ async def ast_grep_search_impl(input_data: SearchToolInput, ast_grep_path: Path)
             cache_key = _create_cache_key('search', input_data)
             
             # Use enhanced performance manager with comprehensive metrics
-            processed_result = await perf_manager.get_or_compute_concurrent_with_metrics(
+            raw_result = await perf_manager.get_or_compute_concurrent_with_metrics(
                 cache_key=cache_key,
                 compute_func=lambda: _execute_ast_grep_search_cached(input_data, ast_grep_path),
                 operation='ast_grep_search',
@@ -1030,16 +1030,40 @@ async def ast_grep_search_impl(input_data: SearchToolInput, ast_grep_path: Path)
                 paths=input_data.paths,
                 result_type='search'
             )
-            
-            return processed_result
         else:
             # Fallback to direct execution without performance management
             logger.warning("Performance manager not available, executing without caching or metrics")
-            return await _execute_ast_grep_search_cached(input_data, ast_grep_path)
+            raw_result = await _execute_ast_grep_search_cached(input_data, ast_grep_path)
+        
+        # Format the result into TextContent based on output format
+        if input_data.output_format == "json":
+            formatted_result = _format_search_results_json(raw_result, input_data)
+            return [TextContent(type="text", text=json.dumps(formatted_result, indent=2))]
+        else:
+            formatted_text = _format_search_results_text(raw_result, input_data)
+            return [TextContent(type="text", text=formatted_text)]
             
+    except ASTGrepError as e:
+        # Handle AST-Grep specific errors
+        error_response = {
+            "error": "AST-Grep execution failed",
+            "message": str(e),
+            "pattern": input_data.pattern,
+            "language": input_data.language,
+            "path": input_data.path
+        }
+        return [TextContent(type="text", text=json.dumps(error_response, indent=2))]
     except Exception as e:
-        logger.error(f"Error in ast_grep_search: {e}")
-        raise
+        # Handle unexpected errors
+        logger.error(f"Unexpected error in ast_grep_search: {e}")
+        error_response = {
+            "error": "Unexpected error during search",
+            "message": str(e),
+            "pattern": input_data.pattern,
+            "language": input_data.language,
+            "path": input_data.path
+        }
+        return [TextContent(type="text", text=json.dumps(error_response, indent=2))]
 
 
 @audit_operation("ast_grep_scan", SecurityLevel.RESTRICTED)
@@ -1070,7 +1094,7 @@ async def ast_grep_scan_impl(input_data: ScanToolInput, ast_grep_path: Path) -> 
             cache_key = _create_cache_key('scan', input_data)
             
             # Use enhanced performance manager with comprehensive metrics
-            processed_result = await perf_manager.get_or_compute_concurrent_with_metrics(
+            raw_result = await perf_manager.get_or_compute_concurrent_with_metrics(
                 cache_key=cache_key,
                 compute_func=lambda: _execute_ast_grep_scan_cached(input_data, ast_grep_path),
                 operation='ast_grep_scan', 
@@ -1082,16 +1106,46 @@ async def ast_grep_scan_impl(input_data: ScanToolInput, ast_grep_path: Path) -> 
                 paths=input_data.paths,
                 result_type='scan'
             )
-            
-            return processed_result
         else:
             # Fallback to direct execution
             logger.warning("Performance manager not available, executing without caching or metrics")
-            return await _execute_ast_grep_scan_cached(input_data, ast_grep_path)
+            raw_result = await _execute_ast_grep_scan_cached(input_data, ast_grep_path)
+        
+        # Get the parsed config for formatting
+        config = None
+        if input_data.rules_config:
+            try:
+                config = discover_and_parse_sgconfig(Path(input_data.path), input_data.rules_config)
+            except Exception as e:
+                logger.warning(f"Could not parse config for formatting: {e}")
+        
+        # Format the result into TextContent based on output format
+        if input_data.output_format == "json":
+            formatted_result = _format_scan_results_json(raw_result, input_data, config)
+            return [TextContent(type="text", text=json.dumps(formatted_result, indent=2))]
+        else:
+            formatted_text = _format_scan_results_text(raw_result, input_data, config)
+            return [TextContent(type="text", text=formatted_text)]
             
+    except ASTGrepError as e:
+        # Handle AST-Grep specific errors
+        error_response = {
+            "error": "AST-Grep scan failed",
+            "message": str(e),
+            "path": input_data.path,
+            "rules_config": input_data.rules_config
+        }
+        return [TextContent(type="text", text=json.dumps(error_response, indent=2))]
     except Exception as e:
-        logger.error(f"Error in ast_grep_scan: {e}")
-        raise
+        # Handle unexpected errors
+        logger.error(f"Unexpected error in ast_grep_scan: {e}")
+        error_response = {
+            "error": "Unexpected error during scan",
+            "message": str(e),
+            "path": input_data.path,
+            "rules_config": input_data.rules_config
+        }
+        return [TextContent(type="text", text=json.dumps(error_response, indent=2))]
 
 
 # Helper function to create cache keys

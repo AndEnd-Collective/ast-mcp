@@ -1007,8 +1007,8 @@
               4,
               5
             ],
-            "details": "Develop and execute test cases covering all integrated components, interfaces, and endpoints. Include negative testing, security vulnerability assessments, and validation against acceptance criteria.",
-            "status": "pending",
+            "details": "Develop and execute test cases covering all integrated components, interfaces, and endpoints. Include negative testing, security vulnerability assessments, and validation against acceptance criteria.\n<info added on 2025-07-01T20:02:26.154Z>\n**Integration Test Progress Update - Result Formatting Issue Identified**\n\nIssue discovered in ast_grep_search_impl function during integration testing. The function returns raw dictionary results from performance manager instead of properly formatted List[TextContent] objects as specified in function signature. This causes integration tests to fail when expecting len(result) == 1 but receiving raw dict instead.\n\nRoot cause: _execute_ast_grep_search_cached returns Dict[str, Any] which performance manager passes through directly, violating the promised List[TextContent] return type.\n\nSolution identified: Add result formatting logic using existing _format_search_results_json and _format_search_results_text functions to convert dict results to proper TextContent objects.\n\nCurrent status: SearchToolInput validation tests completed successfully (9/9 passing). Integration tests blocked pending result formatting fix in ast_grep_search_impl function.\n</info added on 2025-07-01T20:02:26.154Z>\n<info added on 2025-07-01T20:05:36.383Z>\n**Major Progress: AST-Grep Search Integration Tests Fixed**\n\nSuccessfully resolved the critical result formatting problem in ast_grep_search_impl and ast_grep_scan_impl functions that was blocking integration tests.\n\n**Problem Resolution:**\n- Root Cause: Functions were returning raw Dict[str, Any] from performance manager instead of List[TextContent]\n- Solution Implemented: Added proper result formatting logic using existing _format_search_results_json and _format_search_results_text functions\n- Error Handling: Enhanced with comprehensive error handling for both AST-Grep specific and unexpected errors\n\n**Updated Test Results:**\n- SearchToolInput Validation: 9/9 tests passing\n- AST-Grep Search Integration: 4/4 tests passing  \n- Multi-Language Support: All language-specific tests passing\n- Edge Cases: 4/4 tests passing (fixed long pattern validation)\n- Result Formatting: All formatting tests passing\n- AST-Grep Scan: 6/6 tests passing\n\n**Current Test Status:**\n- Search & Scan: 48/48 tests passing\n- Call Detection: 5 failures (separate subsystem, needs investigation)\n- Overall Progress: Major milestone achieved for core search functionality\n\n**Remaining Issues:**\nCall detection tests failing due to response format issues in CallDetector class (different subsystem from main AST-grep tools). These use different response structure and may need separate investigation.\n</info added on 2025-07-01T20:05:36.383Z>",
+            "status": "in-progress",
             "testStrategy": ""
           }
         ]
@@ -1016,7 +1016,7 @@
     ],
     "metadata": {
       "created": "2025-07-01T01:29:35.381Z",
-      "updated": "2025-07-01T19:55:36.871Z",
+      "updated": "2025-07-01T19:56:08.606Z",
       "description": "Tasks for master context"
     }
   }
