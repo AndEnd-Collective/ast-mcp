@@ -8,15 +8,22 @@ import os
 from typing import Dict, Any, Optional, List
 from pathlib import Path
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import psutil
 import time
 import shutil
 import subprocess
+import json
+import platform
+import traceback
+import warnings
+from collections import defaultdict
 
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
-from mcp.types import Resource, Tool, TextContent
+from mcp.types import Resource, Tool, TextContent, ImageContent, EmbeddedResource
+from mcp.server.models import InitializationOptions
+from pydantic import AnyUrl
 
 from .tools import register_tools
 from .resources import register_resources
@@ -44,8 +51,13 @@ from .security import (
     EnhancedAuditLogger,
     get_audit_logger
 )
+from .config import ASTGrepConfig
 
-logger = logging.getLogger(__name__)
+# Suppress deprecation warnings for datetime
+warnings.filterwarnings("ignore", category=DeprecationWarning, message=".*datetime.datetime.utcnow.*")
+
+# Initialize logging first
+logger = setup_logging(__name__)
 
 
 class ServerConfig:
@@ -186,16 +198,17 @@ class InitializationState:
 class HealthMetrics:
     """Collect and manage health metrics over time."""
     
-    def __init__(self, max_history: int = 100):
+    def __init__(self, max_history: int = 50):  # Reduced from 100 to 50
         self.max_history = max_history
         self.health_history: List[Dict[str, Any]] = []
         self.system_metrics_history: List[Dict[str, Any]] = []
         self.component_health_history: Dict[str, List[Dict[str, Any]]] = {}
         self.alert_history: List[Dict[str, Any]] = []
+        self._max_components = 20  # Limit number of components tracked
         
     def add_health_check(self, health_data: Dict[str, Any]) -> None:
         """Add a health check result to history."""
-        health_data["timestamp"] = datetime.utcnow().isoformat()
+        health_data["timestamp"] = datetime.now(timezone.utc).isoformat()
         self.health_history.append(health_data)
         
         # Keep only recent history
@@ -204,7 +217,7 @@ class HealthMetrics:
     
     def add_system_metrics(self, metrics: Dict[str, Any]) -> None:
         """Add system metrics to history."""
-        metrics["timestamp"] = datetime.utcnow().isoformat()
+        metrics["timestamp"] = datetime.now(timezone.utc).isoformat()
         self.system_metrics_history.append(metrics)
         
         if len(self.system_metrics_history) > self.max_history:
@@ -212,10 +225,19 @@ class HealthMetrics:
     
     def add_component_health(self, component: str, health_data: Dict[str, Any]) -> None:
         """Add component-specific health data."""
+        # Limit number of components to prevent unbounded growth
         if component not in self.component_health_history:
+            if len(self.component_health_history) >= self._max_components:
+                # Remove oldest component if limit reached
+                oldest_component = min(
+                    self.component_health_history.keys(),
+                    key=lambda c: self.component_health_history[c][-1].get('timestamp', '')
+                )
+                del self.component_health_history[oldest_component]
+            
             self.component_health_history[component] = []
         
-        health_data["timestamp"] = datetime.utcnow().isoformat()
+        health_data["timestamp"] = datetime.now(timezone.utc).isoformat()
         self.component_health_history[component].append(health_data)
         
         # Keep only recent history per component
@@ -225,7 +247,7 @@ class HealthMetrics:
     def add_alert(self, alert_type: str, message: str, severity: str = "warning") -> None:
         """Add an alert to history."""
         alert = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "type": alert_type,
             "message": message,
             "severity": severity
@@ -238,7 +260,7 @@ class HealthMetrics:
     
     def get_health_trends(self, time_window_minutes: int = 60) -> Dict[str, Any]:
         """Get health trends over a time window."""
-        cutoff_time = datetime.utcnow() - timedelta(minutes=time_window_minutes)
+        cutoff_time = datetime.now(timezone.utc) - timedelta(minutes=time_window_minutes)
         
         recent_health = [
             h for h in self.health_history 
@@ -268,6 +290,48 @@ class HealthMetrics:
                 if datetime.fromisoformat(a["timestamp"]) > cutoff_time
             ]
         }
+
+    def get_alert_summary(self) -> Dict[str, Any]:
+        """Get summary of recent alerts."""
+        if not self.alert_history:
+            return {"total_alerts": 0, "recent_critical": 0, "recent_warnings": 0}
+        
+        # Count alerts by severity
+        critical_count = len([a for a in self.alert_history[-10:] if a.get('severity') == 'critical'])
+        warning_count = len([a for a in self.alert_history[-10:] if a.get('severity') == 'warning'])
+        
+        return {
+            "total_alerts": len(self.alert_history),
+            "recent_critical": critical_count,
+            "recent_warnings": warning_count,
+            "last_alert": self.alert_history[-1] if self.alert_history else None
+        }
+    
+    def cleanup_old_data(self) -> None:
+        """Clean up old health data to prevent memory growth."""
+        try:
+            # Keep only recent health history (half of max)
+            target_size = self.max_history // 2
+            if len(self.health_history) > target_size:
+                self.health_history = self.health_history[-target_size:]
+            
+            # Limit system metrics history
+            if len(self.system_metrics_history) > target_size:
+                self.system_metrics_history = self.system_metrics_history[-target_size:]
+            
+            # Limit component health history per component
+            for component in self.component_health:
+                if len(self.component_health[component]) > target_size:
+                    self.component_health[component] = self.component_health[component][-target_size:]
+            
+            # Limit alert history 
+            if len(self.alert_history) > target_size:
+                self.alert_history = self.alert_history[-target_size:]
+                
+            logger.debug(f"Cleaned up health metrics data, keeping {target_size} entries per category")
+            
+        except Exception as e:
+            logger.error(f"Error cleaning up health metrics data: {e}")
 
 
 class HealthThresholds:
@@ -373,12 +437,12 @@ class SystemResourceMonitor:
                     "io_rates": network_rates
                 },
                 "process": process_info,
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.now(timezone.utc).isoformat()
             }
             
         except Exception as e:
             logger.error(f"Error collecting system metrics: {e}")
-            return {"error": str(e), "timestamp": datetime.utcnow().isoformat()}
+            return {"error": str(e), "timestamp": datetime.now(timezone.utc).isoformat()}
     
     def _calculate_network_rates(self, current_io) -> Dict[str, float]:
         """Calculate network I/O rates."""
@@ -457,7 +521,7 @@ class DependencyHealthChecker:
             "python_dependencies": await self._check_python_dependencies(),
             "system_dependencies": await self._check_system_dependencies(),
             "network_connectivity": await self._check_network_connectivity(),
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
         
         self.last_check_time = current_time
@@ -517,44 +581,100 @@ class DependencyHealthChecker:
             }
     
     async def _check_python_dependencies(self) -> Dict[str, Any]:
-        """Check Python package dependencies."""
+        """Check Python package dependencies health with graceful error handling."""
         try:
-            import pkg_resources
+            # Try to import pkg_resources, but handle gracefully if not available
+            dependencies = {}
+            missing_deps = []
+            version_issues = []
             
-            # Check critical packages
-            critical_packages = ['mcp', 'psutil', 'asyncio']
-            package_status = {}
+            try:
+                import pkg_resources
+                
+                # Check critical dependencies
+                critical_packages = [
+                    'mcp', 'psutil', 'pydantic', 'asyncio', 'typing_extensions'
+                ]
+                
+                for package in critical_packages:
+                    try:
+                        version = pkg_resources.get_distribution(package).version
+                        dependencies[package] = {
+                            'status': 'available',
+                            'version': version,
+                            'critical': True
+                        }
+                    except pkg_resources.DistributionNotFound:
+                        missing_deps.append(package)
+                        dependencies[package] = {
+                            'status': 'missing',
+                            'version': None,
+                            'critical': True
+                        }
+                    except Exception as e:
+                        version_issues.append({'package': package, 'error': str(e)})
+                        dependencies[package] = {
+                            'status': 'error',
+                            'version': None,
+                            'error': str(e),
+                            'critical': True
+                        }
+                        
+            except ImportError:
+                # pkg_resources not available - this is common in some environments
+                logger.info("pkg_resources not available, using basic dependency check")
+                
+                # Basic check without pkg_resources
+                basic_packages = ['psutil', 'pydantic']
+                for package in basic_packages:
+                    try:
+                        __import__(package)
+                        dependencies[package] = {
+                            'status': 'available',
+                            'version': 'unknown (pkg_resources unavailable)',
+                            'critical': True
+                        }
+                    except ImportError:
+                        missing_deps.append(package)
+                        dependencies[package] = {
+                            'status': 'missing',
+                            'version': None,
+                            'critical': True
+                        }
+                        
+                # Add note about pkg_resources
+                dependencies['pkg_resources'] = {
+                    'status': 'unavailable',
+                    'version': None,
+                    'critical': False,
+                    'note': 'Not available in this environment (this is normal for some setups)'
+                }
             
-            for package in critical_packages:
-                try:
-                    if package == 'asyncio':
-                        # asyncio is built-in, just check it's importable
-                        import asyncio
-                        package_status[package] = {
-                            "status": "healthy",
-                            "version": "built-in"
-                        }
-                    else:
-                        distribution = pkg_resources.get_distribution(package)
-                        package_status[package] = {
-                            "status": "healthy",
-                            "version": distribution.version
-                        }
-                except Exception as e:
-                    package_status[package] = {
-                        "status": "unhealthy",
-                        "error": str(e)
-                    }
+            # Determine overall status
+            if missing_deps:
+                status = 'critical'
+            elif version_issues:
+                status = 'warning' 
+            else:
+                status = 'healthy'
             
             return {
-                "status": "healthy" if all(p["status"] == "healthy" for p in package_status.values()) else "degraded",
-                "packages": package_status
+                'status': status,
+                'dependencies': dependencies,
+                'missing_critical': missing_deps,
+                'version_issues': version_issues,
+                'total_checked': len(dependencies),
+                'available_count': len([d for d in dependencies.values() if d['status'] == 'available'])
             }
             
         except Exception as e:
+            logger.error(f"Error checking Python dependencies: {e}")
             return {
-                "status": "unhealthy",
-                "error": f"Failed to check Python dependencies: {e}"
+                'status': 'error',
+                'error': str(e),
+                'dependencies': {},
+                'missing_critical': [],
+                'version_issues': []
             }
     
     async def _check_system_dependencies(self) -> Dict[str, Any]:
@@ -1043,17 +1163,44 @@ class ASTGrepMCPServer:
         self._health_task = asyncio.create_task(self._health_monitoring_loop())
     
     async def _health_monitoring_loop(self) -> None:
-        """Background health monitoring loop."""
+        """Main health monitoring loop with reduced frequency to conserve memory."""
+        logger.info("Starting health monitoring loop")
+        
+        # Use longer intervals to reduce memory pressure
+        health_check_interval = max(self.config.health_check_interval, 60)  # Minimum 60 seconds
+        consecutive_errors = 0
+        max_consecutive_errors = 5
+        
         while not self._shutdown_event.is_set():
             try:
                 await self._perform_health_check()
-                await asyncio.sleep(self.config.health_check_interval)
+                consecutive_errors = 0  # Reset on successful check
+                
+                # Trigger periodic cleanup of health metrics to prevent memory growth
+                if len(self.health_metrics.health_history) > self.health_metrics.max_history * 0.8:
+                    self.health_metrics.cleanup_old_data()
+                
             except asyncio.CancelledError:
+                logger.info("Health monitoring loop cancelled")
                 break
             except Exception as e:
-                logger.error(f"Health check failed: {e}")
-                self._health_status = "unhealthy"
-                await asyncio.sleep(self.config.health_check_interval)
+                consecutive_errors += 1
+                logger.error(f"Health monitoring error #{consecutive_errors}: {e}")
+                
+                if consecutive_errors >= max_consecutive_errors:
+                    logger.critical(f"Health monitoring failed {max_consecutive_errors} times, stopping health monitoring")
+                    break
+            
+            try:
+                await asyncio.wait_for(
+                    self._shutdown_event.wait(), 
+                    timeout=health_check_interval
+                )
+                break  # Shutdown event was set
+            except asyncio.TimeoutError:
+                continue  # Normal timeout, continue monitoring
+        
+        logger.info("Health monitoring loop stopped")
     
     async def _perform_health_check(self) -> None:
         """Perform comprehensive health check with enhanced monitoring."""
@@ -1063,7 +1210,7 @@ class ASTGrepMCPServer:
             # Basic health data
             health_data = {
                 "overall_status": "healthy",
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "check_duration_seconds": 0,
                 "components": {},
                 "alerts": [],
@@ -1103,7 +1250,7 @@ class ASTGrepMCPServer:
             logger.error(f"Health check error: {e}")
             error_health_data = {
                 "overall_status": "unhealthy",
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "error": str(e),
                 "check_duration_seconds": time.time() - start_time if 'start_time' in locals() else 0
             }
