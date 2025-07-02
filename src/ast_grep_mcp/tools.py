@@ -7,7 +7,7 @@ import yaml
 import os
 import time
 import asyncio
-from typing import Dict, Any, List, Optional, Union, AsyncIterator
+from typing import Dict, Any, List, Optional, Union, AsyncIterator, Tuple
 from pathlib import Path
 
 from mcp.server import Server
@@ -2081,8 +2081,36 @@ async def call_graph_generate_impl(input_data: CallGraphInput, ast_grep_path: Pa
         output_dir = Path(".reporepo/ast")
         output_dir.mkdir(parents=True, exist_ok=True)
         
-        # Determine languages to analyze
-        languages = input_data.languages or ["python"]
+        # Check for recent cached results (within last 5 minutes)
+        call_graph_file = output_dir / "call-graph-base.json"
+        if call_graph_file.exists():
+            file_age = time.time() - call_graph_file.stat().st_mtime
+            if file_age < 300:  # 5 minutes cache
+                logger.info(f"Using cached call graph (age: {file_age:.1f}s)")
+                try:
+                    with open(call_graph_file, 'r') as f:
+                        cached_data = json.load(f)
+                    
+                    summary = {
+                        "status": "success (cached)",
+                        "files_created": [str(call_graph_file)],
+                        "summary": {
+                            "total_functions_found": len(cached_data.get("nodes", [])),
+                            "total_calls_found": len(cached_data.get("edges", [])),
+                            "cached_result": True,
+                            "cache_age_seconds": file_age
+                        }
+                    }
+                    return [TextContent(type="text", text=f"Call graph retrieved from cache:\n{json.dumps(summary, indent=2)}")]
+                except Exception as e:
+                    logger.warning(f"Failed to load cached call graph: {e}")
+                    # Continue with fresh generation
+        
+        # Auto-detect languages if not specified
+        languages = input_data.languages
+        if not languages:
+            languages = _detect_languages_in_directory(input_data.path)
+            logger.info(f"Auto-detected languages: {languages}")
         
         # Initialize call graph structure
         nodes = []
@@ -2090,114 +2118,121 @@ async def call_graph_generate_impl(input_data: CallGraphInput, ast_grep_path: Pa
         all_function_definitions = []
         all_function_calls = []
         
-        # Process each language
-        for language in languages:
+        # Process all languages in parallel for better performance
+        async def process_language(language: str):
+            """Process a single language to find function definitions and calls."""
+            lang_definitions = []
+            lang_calls = []
+            
             try:
-                # Search for function definitions
-                # Language-specific patterns for function definitions
-                if language == "python":
-                    def_pattern = "def $FUNC_NAME"
-                elif language in ["javascript", "js", "typescript", "ts"]:
-                    def_pattern = "function $FUNC_NAME"
-                elif language == "rust":
-                    def_pattern = "fn $FUNC_NAME"
-                elif language == "java":
-                    def_pattern = "$TYPE $FUNC_NAME"
-                else:
-                    # Generic pattern
-                    def_pattern = "def $FUNC_NAME"
+                # Get language-specific patterns
+                def_pattern, call_patterns = _get_language_patterns(language)
                 
-                def_args = [
+                # Create all tasks for this language with file filtering
+                language_tasks = []
+                
+                # Build base args with file filtering for better performance
+                base_args = [
                     str(ast_grep_path),
                     "run",
                     "--lang", language,
+                ]
+                
+                # Add file filtering to exclude large/irrelevant files
+                exclude_globs = [
+                    "__pycache__/**",
+                    "*.pyc",
+                    "*.min.js",
+                    "node_modules/**",
+                    ".git/**",
+                    "venv/**",
+                    ".venv/**",
+                    "env/**",
+                    ".env/**",
+                    "build/**",
+                    "dist/**",
+                    "target/**",
+                    "*.egg-info/**",
+                    ".tox/**",
+                    ".pytest_cache/**",
+                    ".mypy_cache/**",
+                    ".ruff_cache/**",
+                    "htmlcov/**",
+                    "*.log"
+                ]
+                
+                # Task for function definitions
+                def_args = base_args + [
                     "--pattern", def_pattern,
                     input_data.path,
                     "--json"
                 ]
                 
-                # Execute function definition search
-                def_process = await asyncio.create_subprocess_exec(
-                    *def_args,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE
-                )
-                def_stdout, def_stderr = await def_process.communicate()
+                # Add exclude patterns
+                for exclude in exclude_globs:
+                    def_args.extend(["--exclude-glob", exclude])
                 
-                if def_process.returncode == 0 and def_stdout:
-                    try:
-                        definitions = json.loads(def_stdout.decode())
-                        all_function_definitions.extend(definitions)
-                    except json.JSONDecodeError:
-                        logger.warning(f"Failed to parse function definitions JSON for {language}")
+                language_tasks.append(_run_ast_grep_with_timeout(def_args, "definitions", language, timeout=8.0))
                 
-                # Search for function calls using multiple patterns
-                call_patterns = []
-                
-                # Language-specific call patterns
-                if language == "python":
-                    call_patterns = [
-                        "$CALL_NAME($$$)",  # Basic function calls with args
-                        "$OBJ.$METHOD($$$)",  # Method calls
-                        "await $ASYNC_CALL($$$)",  # Async function calls
-                        "$MODULE.$FUNC($$$)",  # Module function calls
-                    ]
-                elif language in ["javascript", "js", "typescript", "ts"]:
-                    call_patterns = [
-                        "$CALL_NAME($$$)",  # Basic function calls
-                        "$OBJ.$METHOD($$$)",  # Method calls
-                        "await $ASYNC_CALL($$$)",  # Async calls
-                        "new $CONSTRUCTOR($$$)",  # Constructor calls
-                    ]
-                elif language == "rust":
-                    call_patterns = [
-                        "$CALL_NAME($$$)",  # Function calls
-                        "$OBJ.$METHOD($$$)",  # Method calls
-                        "$MODULE::$FUNC($$$)",  # Module function calls
-                    ]
-                elif language == "java":
-                    call_patterns = [
-                        "$CALL_NAME($$$)",  # Method calls
-                        "$OBJ.$METHOD($$$)",  # Instance method calls
-                        "$CLASS.$STATIC_METHOD($$$)",  # Static method calls
-                        "new $CONSTRUCTOR($$$)",  # Constructor calls
-                    ]
-                else:
-                    # Generic patterns for other languages
-                    call_patterns = [
-                        "$CALL_NAME($$$)",
-                        "$OBJ.$METHOD($$$)",
-                    ]
-                
-                # Execute multiple pattern searches and combine results
-                for pattern in call_patterns:
-                    call_args = [
-                        str(ast_grep_path),
-                        "run",
-                        "--lang", language,
-                        "--pattern", pattern,
+                # Only use 1 call pattern for speed (most important one)
+                if call_patterns:
+                    call_args = base_args + [
+                        "--pattern", call_patterns[0],  # Only use the first (most important) pattern
                         input_data.path,
                         "--json"
                     ]
                     
-                    # Execute function call search
-                    call_process = await asyncio.create_subprocess_exec(
-                        *call_args,
-                        stdout=asyncio.subprocess.PIPE,
-                        stderr=asyncio.subprocess.PIPE
-                    )
-                    call_stdout, call_stderr = await call_process.communicate()
+                    # Add exclude patterns
+                    for exclude in exclude_globs:
+                        call_args.extend(["--exclude-glob", exclude])
                     
-                    if call_process.returncode == 0 and call_stdout:
-                        try:
-                            calls = json.loads(call_stdout.decode())
-                            all_function_calls.extend(calls)
-                        except json.JSONDecodeError:
-                            logger.warning(f"Failed to parse function calls JSON for {language} with pattern {pattern}")
+                    language_tasks.append(_run_ast_grep_with_timeout(call_args, "calls_0", language, timeout=8.0))
+                
+                # Execute all tasks for this language in parallel with shorter timeout
+                results = await asyncio.wait_for(
+                    asyncio.gather(*language_tasks, return_exceptions=True),
+                    timeout=15.0  # 15 second timeout per language
+                )
+                
+                # Process results
+                for result in results:
+                    if isinstance(result, Exception):
+                        logger.warning(f"Task failed for language {language}: {result}")
+                        continue
+                    
+                    task_type, data = result
+                    if task_type == "definitions":
+                        lang_definitions.extend(data)
+                    elif task_type.startswith("calls_"):
+                        lang_calls.extend(data)
                         
+            except asyncio.TimeoutError:
+                logger.warning(f"Language processing timed out for {language}")
             except Exception as e:
                 logger.error(f"Error processing language {language}: {str(e)}")
-                continue
+            
+            return lang_definitions, lang_calls
+        
+        # Run all languages in parallel with shorter total timeout
+        try:
+            language_results = await asyncio.wait_for(
+                asyncio.gather(*[process_language(lang) for lang in languages], return_exceptions=True),
+                timeout=20.0  # 20 second total timeout for faster response
+            )
+            
+            # Combine results from all languages
+            for result in language_results:
+                if isinstance(result, Exception):
+                    logger.warning(f"Language processing failed: {result}")
+                    continue
+                
+                lang_definitions, lang_calls = result
+                all_function_definitions.extend(lang_definitions)
+                all_function_calls.extend(lang_calls)
+                
+        except asyncio.TimeoutError:
+            logger.error("Call graph generation timed out")
+            return [TextContent(type="text", text="Error: Call graph generation timed out. Try specifying specific languages or a smaller path.")]
         
         # Extract function names from definitions for node creation
         function_names = set()
@@ -2289,10 +2324,10 @@ async def call_graph_generate_impl(input_data: CallGraphInput, ast_grep_path: Pa
         files_saved = []
         
         # Save main call graph
-        call_graph_file = output_dir / "call-graph-base.json"
-        with open(call_graph_file, 'w') as f:
+        graph_output_file = output_dir / "call-graph-base.json"
+        with open(graph_output_file, 'w') as f:
             json.dump(call_graph, f, indent=2)
-        files_saved.append(str(call_graph_file))
+        files_saved.append(str(graph_output_file))
         
         # Save function definitions
         definitions_file = output_dir / "function-definitions.json"
@@ -2326,6 +2361,153 @@ async def call_graph_generate_impl(input_data: CallGraphInput, ast_grep_path: Pa
         error_msg = f"Error generating call graph: {str(e)}"
         logger.error(error_msg)
         return [TextContent(type="text", text=f"Error: {error_msg}")]
+
+
+def _detect_languages_in_directory(directory_path: str) -> List[str]:
+    """Auto-detect programming languages in a directory based on file extensions."""
+    language_mapping = {
+        '.py': 'python',
+        '.js': 'javascript', 
+        '.jsx': 'javascript',
+        '.ts': 'typescript',
+        '.tsx': 'typescript',
+        '.rs': 'rust',
+        '.java': 'java',
+        '.kt': 'kotlin',
+        '.go': 'go',
+        '.cpp': 'cpp',
+        '.cc': 'cpp',
+        '.cxx': 'cpp',
+        '.c': 'c',
+        '.h': 'c',
+        '.hpp': 'cpp',
+        '.cs': 'csharp',
+        '.rb': 'ruby',
+        '.php': 'php',
+        '.swift': 'swift',
+        '.scala': 'scala',
+        '.sh': 'bash',
+        '.bash': 'bash'
+    }
+    
+    # Directories to skip for performance
+    skip_dirs = {
+        'node_modules', '.git', '__pycache__', '.pytest_cache', 
+        'venv', 'env', '.venv', '.env', 'build', 'dist', 'target',
+        '.tox', '.coverage', 'htmlcov', '.mypy_cache', '.ruff_cache',
+        'egg-info', '.eggs', '.idea', '.vscode', '.vs'
+    }
+    
+    detected_languages = set()
+    files_checked = 0
+    max_files_to_check = 50  # Limit file scanning for speed
+    
+    try:
+        path_obj = Path(directory_path)
+        if path_obj.is_file():
+            # Single file
+            suffix = path_obj.suffix.lower()
+            if suffix in language_mapping:
+                detected_languages.add(language_mapping[suffix])
+        else:
+            # Directory - fast scan with limitations
+            for file_path in path_obj.rglob('*'):
+                # Skip if we've checked enough files
+                if files_checked >= max_files_to_check:
+                    break
+                    
+                # Skip directories we don't want to scan
+                if any(skip_dir in str(file_path) for skip_dir in skip_dirs):
+                    continue
+                    
+                if file_path.is_file():
+                    files_checked += 1
+                    suffix = file_path.suffix.lower()
+                    if suffix in language_mapping:
+                        detected_languages.add(language_mapping[suffix])
+                    
+                    # Stop after finding 3 languages for speed
+                    if len(detected_languages) >= 3:
+                        break
+    except Exception as e:
+        logger.warning(f"Error detecting languages in {directory_path}: {e}")
+        return ["python"]  # Default fallback
+    
+    return list(detected_languages) if detected_languages else ["python"]
+
+
+def _get_language_patterns(language: str) -> Tuple[str, List[str]]:
+    """Get function definition and call patterns for a specific language."""
+    if language == "python":
+        def_pattern = "def $FUNC_NAME"
+        call_patterns = [
+            "$CALL_NAME($$$)",  # Basic function calls
+            "$OBJ.$METHOD($$$)",  # Method calls
+        ]
+    elif language in ["javascript", "js", "typescript", "ts"]:
+        def_pattern = "function $FUNC_NAME"
+        call_patterns = [
+            "$CALL_NAME($$$)",  # Basic function calls
+            "$OBJ.$METHOD($$$)",  # Method calls
+        ]
+    elif language == "rust":
+        def_pattern = "fn $FUNC_NAME"
+        call_patterns = [
+            "$CALL_NAME($$$)",  # Function calls
+            "$OBJ.$METHOD($$$)",  # Method calls
+        ]
+    elif language == "java":
+        def_pattern = "$TYPE $FUNC_NAME"
+        call_patterns = [
+            "$CALL_NAME($$$)",  # Method calls
+            "$OBJ.$METHOD($$$)",  # Instance method calls
+        ]
+    else:
+        # Generic patterns for other languages
+        def_pattern = "def $FUNC_NAME"
+        call_patterns = [
+            "$CALL_NAME($$$)",
+            "$OBJ.$METHOD($$$)",
+        ]
+    
+    return def_pattern, call_patterns
+
+
+async def _run_ast_grep_with_timeout(args: List[str], task_type: str, language: str, timeout: float = 8.0) -> Tuple[str, List[dict]]:
+    """Run ast-grep command with timeout and return parsed results."""
+    try:
+        process = await asyncio.wait_for(
+            asyncio.create_subprocess_exec(
+                *args,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            ),
+            timeout=timeout
+        )
+        
+        stdout, stderr = await asyncio.wait_for(
+            process.communicate(),
+            timeout=timeout
+        )
+        
+        if process.returncode == 0 and stdout:
+            try:
+                data = json.loads(stdout.decode())
+                return task_type, data
+            except json.JSONDecodeError as e:
+                logger.warning(f"Failed to parse JSON for {task_type} in {language}: {e}")
+                return task_type, []
+        else:
+            if stderr:
+                logger.debug(f"ast-grep stderr for {task_type} in {language}: {stderr.decode()}")
+            return task_type, []
+            
+    except asyncio.TimeoutError:
+        logger.warning(f"ast-grep timeout for {task_type} in {language}")
+        return task_type, []
+    except Exception as e:
+        logger.warning(f"ast-grep error for {task_type} in {language}: {e}")
+        return task_type, []
 
 
 def register_tools(server: Server, ast_grep_path: Path) -> None:
