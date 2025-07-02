@@ -57,7 +57,8 @@ from .config import ASTGrepConfig
 warnings.filterwarnings("ignore", category=DeprecationWarning, message=".*datetime.datetime.utcnow.*")
 
 # Initialize logging first
-logger = setup_logging(__name__)
+setup_logging("INFO")
+logger = logging.getLogger(__name__)
 
 
 class ServerConfig:
@@ -1177,8 +1178,8 @@ class ASTGrepMCPServer:
                 consecutive_errors = 0  # Reset on successful check
                 
                 # Trigger periodic cleanup of health metrics to prevent memory growth
-                if len(self.health_metrics.health_history) > self.health_metrics.max_history * 0.8:
-                    self.health_metrics.cleanup_old_data()
+                if len(self._health_metrics.health_history) > self._health_metrics.max_history * 0.8:
+                    self._health_metrics.cleanup_old_data()
                 
             except asyncio.CancelledError:
                 logger.info("Health monitoring loop cancelled")

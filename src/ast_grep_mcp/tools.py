@@ -2074,22 +2074,258 @@ async def call_graph_generate_impl(input_data: CallGraphInput, ast_grep_path: Pa
     Returns:
         List of text content with call graph data
     """
-    # TODO: Implement call graph generation
     logger.info(f"Generating call graph for path: {input_data.path}")
     
-    # Placeholder implementation
-    result = {
-        "nodes": [],
-        "edges": [],
+    try:
+        # Create output directory
+        output_dir = Path(".reporepo/ast")
+        output_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Determine languages to analyze
+        languages = input_data.languages or ["python"]
+        
+        # Initialize call graph structure
+        nodes = []
+        edges = []
+        all_function_definitions = []
+        all_function_calls = []
+        
+        # Process each language
+        for language in languages:
+            try:
+                # Search for function definitions
+                # Language-specific patterns for function definitions
+                if language == "python":
+                    def_pattern = "def $FUNC_NAME"
+                elif language in ["javascript", "js", "typescript", "ts"]:
+                    def_pattern = "function $FUNC_NAME"
+                elif language == "rust":
+                    def_pattern = "fn $FUNC_NAME"
+                elif language == "java":
+                    def_pattern = "$TYPE $FUNC_NAME"
+                else:
+                    # Generic pattern
+                    def_pattern = "def $FUNC_NAME"
+                
+                def_args = [
+                    str(ast_grep_path),
+                    "run",
+                    "--lang", language,
+                    "--pattern", def_pattern,
+                    input_data.path,
+                    "--json"
+                ]
+                
+                # Execute function definition search
+                def_process = await asyncio.create_subprocess_exec(
+                    *def_args,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE
+                )
+                def_stdout, def_stderr = await def_process.communicate()
+                
+                if def_process.returncode == 0 and def_stdout:
+                    try:
+                        definitions = json.loads(def_stdout.decode())
+                        all_function_definitions.extend(definitions)
+                    except json.JSONDecodeError:
+                        logger.warning(f"Failed to parse function definitions JSON for {language}")
+                
+                # Search for function calls using multiple patterns
+                call_patterns = []
+                
+                # Language-specific call patterns
+                if language == "python":
+                    call_patterns = [
+                        "$CALL_NAME($$$)",  # Basic function calls with args
+                        "$OBJ.$METHOD($$$)",  # Method calls
+                        "await $ASYNC_CALL($$$)",  # Async function calls
+                        "$MODULE.$FUNC($$$)",  # Module function calls
+                    ]
+                elif language in ["javascript", "js", "typescript", "ts"]:
+                    call_patterns = [
+                        "$CALL_NAME($$$)",  # Basic function calls
+                        "$OBJ.$METHOD($$$)",  # Method calls
+                        "await $ASYNC_CALL($$$)",  # Async calls
+                        "new $CONSTRUCTOR($$$)",  # Constructor calls
+                    ]
+                elif language == "rust":
+                    call_patterns = [
+                        "$CALL_NAME($$$)",  # Function calls
+                        "$OBJ.$METHOD($$$)",  # Method calls
+                        "$MODULE::$FUNC($$$)",  # Module function calls
+                    ]
+                elif language == "java":
+                    call_patterns = [
+                        "$CALL_NAME($$$)",  # Method calls
+                        "$OBJ.$METHOD($$$)",  # Instance method calls
+                        "$CLASS.$STATIC_METHOD($$$)",  # Static method calls
+                        "new $CONSTRUCTOR($$$)",  # Constructor calls
+                    ]
+                else:
+                    # Generic patterns for other languages
+                    call_patterns = [
+                        "$CALL_NAME($$$)",
+                        "$OBJ.$METHOD($$$)",
+                    ]
+                
+                # Execute multiple pattern searches and combine results
+                for pattern in call_patterns:
+                    call_args = [
+                        str(ast_grep_path),
+                        "run",
+                        "--lang", language,
+                        "--pattern", pattern,
+                        input_data.path,
+                        "--json"
+                    ]
+                    
+                    # Execute function call search
+                    call_process = await asyncio.create_subprocess_exec(
+                        *call_args,
+                        stdout=asyncio.subprocess.PIPE,
+                        stderr=asyncio.subprocess.PIPE
+                    )
+                    call_stdout, call_stderr = await call_process.communicate()
+                    
+                    if call_process.returncode == 0 and call_stdout:
+                        try:
+                            calls = json.loads(call_stdout.decode())
+                            all_function_calls.extend(calls)
+                        except json.JSONDecodeError:
+                            logger.warning(f"Failed to parse function calls JSON for {language} with pattern {pattern}")
+                        
+            except Exception as e:
+                logger.error(f"Error processing language {language}: {str(e)}")
+                continue
+        
+        # Extract function names from definitions for node creation
+        function_names = set()
+        for definition in all_function_definitions:
+            meta_vars = definition.get("metaVariables", {})
+            single_vars = meta_vars.get("single", {})
+            if single_vars.get("FUNC_NAME"):
+                func_name = single_vars["FUNC_NAME"]["text"]
+                function_names.add(func_name)
+                nodes.append({
+                    "id": func_name,
+                    "type": "function",
+                    "file": definition.get("file", ""),
+                    "line": definition.get("range", {}).get("start", {}).get("line", 0)
+                })
+        
+        # Create edges from function calls
+        for call in all_function_calls:
+            meta_vars = call.get("metaVariables", {})
+            single_vars = meta_vars.get("single", {})
+            
+            # Extract function name from various metavariables
+            called_func = None
+            call_type = "unknown"
+            
+            # Try different metavariable names based on patterns used
+            if single_vars.get("CALL_NAME"):
+                called_func = single_vars["CALL_NAME"]["text"]
+                call_type = "function_call"
+            elif single_vars.get("METHOD"):
+                called_func = single_vars["METHOD"]["text"]
+                call_type = "method_call"
+                # For method calls, also get the object if available
+                if single_vars.get("OBJ"):
+                    obj_name = single_vars["OBJ"]["text"]
+                    called_func = f"{obj_name}.{called_func}"
+            elif single_vars.get("ASYNC_CALL"):
+                called_func = single_vars["ASYNC_CALL"]["text"]
+                call_type = "async_call"
+            elif single_vars.get("FUNC"):
+                called_func = single_vars["FUNC"]["text"]
+                call_type = "module_function"
+                # For module functions, also get the module if available
+                if single_vars.get("MODULE"):
+                    module_name = single_vars["MODULE"]["text"]
+                    called_func = f"{module_name}.{called_func}"
+            elif single_vars.get("CONSTRUCTOR"):
+                called_func = single_vars["CONSTRUCTOR"]["text"]
+                call_type = "constructor_call"
+            elif single_vars.get("STATIC_METHOD"):
+                called_func = single_vars["STATIC_METHOD"]["text"]
+                call_type = "static_method"
+                if single_vars.get("CLASS"):
+                    class_name = single_vars["CLASS"]["text"]
+                    called_func = f"{class_name}.{called_func}"
+            
+            if called_func:
+                caller_file = call.get("file", "")
+                
+                # Try to determine caller function (simplified)
+                caller_func = f"<anonymous>:{Path(caller_file).name}"
+                
+                # Create edge regardless of whether target function is in our function_names
+                # This helps identify external calls and missed function definitions
+                edges.append({
+                    "from": caller_func,
+                    "to": called_func,
+                    "type": call_type,
+                    "file": caller_file,
+                    "line": call.get("range", {}).get("start", {}).get("line", 0),
+                    "in_scope": called_func in function_names
+                })
+        
+        # Build final call graph
+        call_graph = {
+            "nodes": nodes,
+            "edges": edges,
         "metadata": {
-            "total_functions": 0,
-            "total_calls": 0,
-            "languages": input_data.languages or [],
-            "path": input_data.path
+                "total_functions": len(nodes),
+                "total_calls": len(edges),
+                "languages": languages,
+                "path": input_data.path,
+                "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                "include_external": input_data.include_external
+            }
+        }
+        
+        # Save files
+        files_saved = []
+        
+        # Save main call graph
+        call_graph_file = output_dir / "call-graph-base.json"
+        with open(call_graph_file, 'w') as f:
+            json.dump(call_graph, f, indent=2)
+        files_saved.append(str(call_graph_file))
+        
+        # Save function definitions
+        definitions_file = output_dir / "function-definitions.json"
+        with open(definitions_file, 'w') as f:
+            json.dump(all_function_definitions, f, indent=2)
+        files_saved.append(str(definitions_file))
+        
+        # Save function calls
+        calls_file = output_dir / "function-calls.json"
+        with open(calls_file, 'w') as f:
+            json.dump(all_function_calls, f, indent=2)
+        files_saved.append(str(calls_file))
+        
+        # Create summary
+        summary = {
+            "status": "success",
+            "files_created": files_saved,
+            "summary": {
+                "total_functions_found": len(nodes),
+                "total_calls_found": len(edges),
+                "languages_analyzed": languages,
+                "output_directory": str(output_dir)
         }
     }
     
-    return [TextContent(type="text", text=f"Call graph: {result}")]
+        logger.info(f"Call graph generation completed. Files saved: {files_saved}")
+        
+        return [TextContent(type="text", text=f"Call graph generated successfully:\n{json.dumps(summary, indent=2)}")]
+        
+    except Exception as e:
+        error_msg = f"Error generating call graph: {str(e)}"
+        logger.error(error_msg)
+        return [TextContent(type="text", text=f"Error: {error_msg}")]
 
 
 def register_tools(server: Server, ast_grep_path: Path) -> None:
@@ -2276,7 +2512,7 @@ def register_tools(server: Server, ast_grep_path: Path) -> None:
         return await ast_grep_run_tool_impl(input_data, ast_grep_path)
     
     @server.call_tool()
-    async def call_graph_generate(arguments: Dict[str, Any]) -> List[TextContent]:
+    async def call_graph_generate(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
         """Generate call graph for the specified codebase."""
         input_data = CallGraphInput(**arguments)
         return await call_graph_generate_tool_impl(input_data, ast_grep_path)
