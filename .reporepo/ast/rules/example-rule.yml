@@ -1,0 +1,8 @@
+id: example-rule
+message: This is an example rule. Modify or delete as needed.
+severity: info
+language: JavaScript
+rule:
+  pattern: console.log($MSG)
+note: Example rule that matches console.log statements. See ast-grep documentation
+  for more patterns.

@@ -226,6 +226,8 @@ node_modules/
 # OS specific
 .DS_Store
 
+# tasks/ .reporepo/ast/
+
 # Task files
 # tasks.json
 # tasks/ 

@@ -1,0 +1,8 @@
+id: rust-unused-var
+language: rust
+rule:
+  pattern: let $VAR = $VALUE;
+message: Unused variable - consider using underscore prefix
+note: Unused variables should be prefixed with underscore
+severity: info
+fix: 'Prefix with underscore: _var or use the variable'

@@ -1,0 +1,8 @@
+id: go-error-handling
+language: go
+rule:
+  pattern: $VAR, _ := $FUNC($ARGS)
+message: Handle errors properly, do not ignore them
+note: Ignoring errors can lead to unexpected behavior and bugs.
+severity: error
+fix: 'Handle the error: if err \!= nil { return err }'

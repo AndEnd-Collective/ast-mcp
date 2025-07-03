@@ -1,0 +1,8 @@
+id: go-empty-if-err
+language: go
+rule:
+  pattern: if err \!= nil {}
+message: Empty error handling blocks should be avoided
+note: Empty error handling defeats the purpose of Go error handling.
+severity: warning
+fix: 'Add appropriate error handling: log, return, or handle the error'

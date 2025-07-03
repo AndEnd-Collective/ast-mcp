@@ -1,0 +1,8 @@
+id: js-no-var
+language: javascript
+rule:
+  pattern: var $NAME = $VALUE
+message: Use let or const instead of var
+note: var has function scope and can lead to unexpected behavior
+severity: warning
+fix: Replace with let or const

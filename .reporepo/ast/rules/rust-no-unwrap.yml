@@ -1,0 +1,8 @@
+id: rust-no-unwrap
+language: rust
+rule:
+  pattern: $EXPR.unwrap()
+message: Avoid using unwrap() - handle errors explicitly
+note: unwrap() can panic - prefer explicit error handling
+severity: warning
+fix: Use match, if let, or expect() with error message

@@ -20,7 +20,7 @@ import sys
 import tracemalloc
 from collections import OrderedDict, defaultdict, deque
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from functools import wraps
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, TypeVar, Union, AsyncIterator, Iterator, Awaitable
@@ -939,18 +939,18 @@ class MemoryConfig:
     # Memory monitoring settings
     enable_detailed_monitoring: bool = True
     enable_leak_detection: bool = True
-    enable_tracemalloc: bool = True
-    tracemalloc_limit: int = 25  # Top N memory allocations to track
+    enable_tracemalloc: bool = False  # Disabled by default due to overhead
+    tracemalloc_limit: int = 10  # Reduced from 25 to save memory
     
     # Memory thresholds (in MB)
     warning_threshold_mb: int = 512     # Warn when memory usage exceeds this
     critical_threshold_mb: int = 1024   # Critical memory usage threshold
     max_memory_mb: int = 2048           # Maximum allowed memory usage
     
-    # Monitoring intervals (in seconds)
-    monitoring_interval: int = 30       # General monitoring interval
-    leak_check_interval: int = 300      # Memory leak detection interval
-    gc_optimization_interval: int = 60  # Garbage collection optimization interval
+    # Monitoring intervals (in seconds) - reduced frequency to save resources
+    monitoring_interval: int = 60       # Increased from 30 to 60 seconds
+    leak_check_interval: int = 600      # Increased from 300 to 600 seconds (10 min)
+    gc_optimization_interval: int = 120 # Increased from 60 to 120 seconds
     
     # Memory optimization settings
     enable_aggressive_gc: bool = False   # Enable aggressive garbage collection
@@ -1575,7 +1575,7 @@ class EnhancedPerformanceManager(PerformanceManager):
             await asyncio.gather(*self._monitoring_tasks, return_exceptions=True)
         
         if self._memory_monitor:
-            await self._memory_monitor.shutdown()
+            await self._memory_monitor.stop()
         await super().shutdown()
         
         logger.info("Enhanced performance manager shutdown complete")
@@ -1593,7 +1593,7 @@ class EnhancedPerformanceManager(PerformanceManager):
                     # Get system metrics
                     memory_snapshot = self._memory_monitor.get_current_usage()
                     cpu_usage = memory_snapshot.cpu_percent if hasattr(memory_snapshot, 'cpu_percent') else 0.0
-                    memory_usage = memory_snapshot.memory_percent
+                    memory_usage = memory_snapshot.percent
                     
                     # Get active requests and queue length from concurrent manager
                     active_requests = len(self._concurrent_manager._active_requests) if hasattr(self._concurrent_manager, '_active_requests') else 0
@@ -1826,7 +1826,7 @@ class EnhancedPerformanceManager(PerformanceManager):
                 }
             },
             'system_health': {
-                'memory_pressure': memory_snapshot.memory_percent > 80 if memory_snapshot else False,
+                'memory_pressure': memory_snapshot.percent > 80 if memory_snapshot else False,
                 'high_error_rate': metrics_data.get('global_metrics', {}).get('global_error_rate', 0) > 0.05,
                 'high_timeout_rate': metrics_data.get('global_metrics', {}).get('global_timeout_rate', 0) > 0.02
             },
@@ -1969,17 +1969,24 @@ class MemoryMonitor:
         self._leak_detection_task: Optional[asyncio.Task] = None
         self._gc_optimization_task: Optional[asyncio.Task] = None
         
-        # Memory tracking state
+        # Memory tracking state (reduced overhead)
         self._baseline_memory: Optional[float] = None
         self._peak_memory: float = 0.0
-        self._leak_candidates: Dict[str, int] = {}
+        self._leak_candidates: Dict[str, Dict[str, Any]] = {}  
+        self._max_leak_candidates: int = 20  # Reduced from 50 to save memory
+        self._max_snapshots: int = 20  # Reduced from 50 to save memory
+        self._max_alerts: int = 10  # Reduced from 25 to save memory
         
-        # Initialize tracemalloc if enabled
+        # Initialize tracemalloc only if enabled and not already running
         if self.config.enable_tracemalloc and not tracemalloc.is_tracing():
             tracemalloc.start(self.config.tracemalloc_limit)
-            logger.info("Memory tracing started with tracemalloc")
+            logger.info(f"Memory tracing started with tracemalloc (limit: {self.config.tracemalloc_limit})")
+        elif self.config.enable_tracemalloc:
+            logger.info("Tracemalloc already running, skipping initialization")
+        else:
+            logger.info("Tracemalloc disabled to reduce memory overhead")
         
-        logger.info(f"MemoryMonitor initialized with config: {config}")
+        logger.info(f"MemoryMonitor initialized with reduced overhead config")
     
     async def start(self) -> None:
         """Start memory monitoring tasks."""
@@ -2063,19 +2070,23 @@ class MemoryMonitor:
             memory_info = self._process.memory_info()
             memory_percent = self._process.memory_percent()
             
-            # Get system memory info
+            # Get system memory info (only available memory to reduce overhead)
             system_memory = psutil.virtual_memory()
             
-            # Get process info
+            # Get process info (reduced data collection)
             num_threads = self._process.num_threads()
             try:
                 num_fds = self._process.num_fds()
             except (psutil.AccessDenied, AttributeError):
                 num_fds = 0  # Not available on all platforms
             
-            # Get Python-specific info
-            python_objects = len(gc.get_objects())
-            gc_counts = gc.get_count()
+            # Get Python-specific info (only if detailed monitoring enabled)
+            if self.config.enable_detailed_monitoring:
+                python_objects = len(gc.get_objects())
+                gc_counts = gc.get_count()
+            else:
+                python_objects = 0
+                gc_counts = (0, 0, 0)
             
             # Create snapshot
             snapshot = MemorySnapshot(
@@ -2101,10 +2112,12 @@ class MemoryMonitor:
             # Update peak memory
             self._peak_memory = max(self._peak_memory, snapshot.rss_mb)
             
-            # Add to snapshots (keep last 100 snapshots)
+            # Add to snapshots with enforced limit
             self._snapshots.append(snapshot)
-            if len(self._snapshots) > 100:
-                self._snapshots.pop(0)
+            if len(self._snapshots) > self._max_snapshots:
+                # Remove oldest snapshots
+                excess = len(self._snapshots) - self._max_snapshots
+                self._snapshots = self._snapshots[excess:]
             
             return snapshot
             
@@ -2192,22 +2205,37 @@ class MemoryMonitor:
             # Get current tracemalloc snapshot
             snapshot = tracemalloc.take_snapshot()
             top_stats = snapshot.statistics('lineno')
+            current_time = time.time()
+            
+            # Clean up old leak candidates first
+            self._cleanup_leak_candidates(current_time)
             
             # Check for lines with significantly increased memory usage
             for stat in top_stats[:10]:  # Check top 10 memory allocations
                 size_mb = stat.size / 1024 / 1024
                 if size_mb > 10:  # Alert if any single allocation is >10MB
-                    key = f"{stat.traceback.format()}"
+                    # Use shorter key instead of full stack trace to save memory
+                    key = self._generate_compact_key(stat)
                     
-                    # Track this potential leak candidate
+                    # Track this potential leak candidate with metadata
                     if key in self._leak_candidates:
-                        self._leak_candidates[key] += 1
+                        self._leak_candidates[key]['count'] += 1
+                        self._leak_candidates[key]['last_seen'] = current_time
+                        self._leak_candidates[key]['size_mb'] = size_mb
                     else:
-                        self._leak_candidates[key] = 1
+                        # Enforce size limit
+                        if len(self._leak_candidates) >= self._max_leak_candidates:
+                            self._evict_oldest_leak_candidate()
+                        
+                        self._leak_candidates[key] = {
+                            'count': 1,
+                            'last_seen': current_time,
+                            'size_mb': size_mb,
+                            'traceback': stat.traceback.format()[-1]  # Only keep last line
+                        }
                     
                     # Alert if we've seen this allocation pattern multiple times
-                    if self._leak_candidates[key] >= 3:
-                        current_time = time.time()
+                    if self._leak_candidates[key]['count'] >= 3:
                         if self._should_send_alert('leak_detected', current_time):
                             alert = MemoryAlert(
                                 alert_type='leak_detected',
@@ -2216,7 +2244,7 @@ class MemoryMonitor:
                                 threshold_mb=10,
                                 message=f"Potential memory leak detected: {size_mb:.1f}MB allocation",
                                 suggested_actions=[
-                                    "Review code at: " + stat.traceback.format()[-1],
+                                    "Review code at: " + self._leak_candidates[key]['traceback'],
                                     "Check for circular references",
                                     "Consider weak references",
                                     "Review object lifecycle management"
@@ -2225,10 +2253,42 @@ class MemoryMonitor:
                             await self._send_alert(alert)
                             
                             # Reset counter to avoid spam
-                            self._leak_candidates[key] = 0
+                            self._leak_candidates[key]['count'] = 0
         
         except Exception as e:
             logger.error(f"Error checking for memory leaks: {e}")
+    
+    def _generate_compact_key(self, stat) -> str:
+        """Generate a compact key for leak detection instead of full stack trace."""
+        try:
+            # Use file:line instead of full traceback to save memory
+            frame = stat.traceback._frames[0]  # Get top frame
+            return f"{frame.filename}:{frame.lineno}"
+        except (IndexError, AttributeError):
+            # Fallback to hash of traceback
+            return str(hash(str(stat.traceback)))
+    
+    def _cleanup_leak_candidates(self, current_time: float) -> None:
+        """Remove leak candidates older than 1 hour."""
+        cutoff_time = current_time - 3600  # 1 hour
+        keys_to_remove = [
+            key for key, data in self._leak_candidates.items()
+            if data['last_seen'] < cutoff_time
+        ]
+        for key in keys_to_remove:
+            del self._leak_candidates[key]
+    
+    def _evict_oldest_leak_candidate(self) -> None:
+        """Remove the oldest leak candidate when max size is reached."""
+        if not self._leak_candidates:
+            return
+        
+        # Find the oldest entry
+        oldest_key = min(
+            self._leak_candidates.keys(),
+            key=lambda k: self._leak_candidates[k]['last_seen']
+        )
+        del self._leak_candidates[oldest_key]
     
     async def _optimize_garbage_collection(self) -> None:
         """Optimize garbage collection based on current memory usage."""
@@ -2294,8 +2354,8 @@ class MemoryMonitor:
         """Send memory alert (log and store)."""
         self._alerts.append(alert)
         
-        # Keep only last 50 alerts
-        if len(self._alerts) > 50:
+        # Keep only last 25 alerts (reduced from 50 to save memory)
+        if len(self._alerts) > 25:
             self._alerts.pop(0)
         
         # Log the alert
@@ -2366,6 +2426,59 @@ class MemoryMonitor:
         
         logger.info(f"Manual memory cleanup: {cleanup_results}")
         return cleanup_results
+    
+    def _check_memory_alerts(self, snapshot: MemorySnapshot) -> None:
+        """Check for memory alerts and manage alert storage."""
+        current_time = time.time()
+        
+        alerts_to_add = []
+        
+        # Check memory usage thresholds
+        if snapshot.rss_mb > self.config.critical_threshold_mb:
+            alert_type = 'critical_memory'
+            if self._should_send_alert(alert_type, current_time):
+                alerts_to_add.append(MemoryAlert(
+                    timestamp=current_time,
+                    alert_type=alert_type,
+                    message=f"Critical memory usage: {snapshot.rss_mb:.1f}MB (threshold: {self.config.critical_threshold_mb}MB)",
+                    memory_mb=snapshot.rss_mb,
+                    severity='critical'
+                ))
+                
+        elif snapshot.rss_mb > self.config.warning_threshold_mb:
+            alert_type = 'high_memory'
+            if self._should_send_alert(alert_type, current_time):
+                alerts_to_add.append(MemoryAlert(
+                    timestamp=current_time,
+                    alert_type=alert_type,
+                    message=f"High memory usage: {snapshot.rss_mb:.1f}MB (threshold: {self.config.warning_threshold_mb}MB)",
+                    memory_mb=snapshot.rss_mb,
+                    severity='warning'
+                ))
+        
+        # Check for rapid memory growth (but with higher threshold to reduce false positives)
+        if (hasattr(snapshot, 'growth_rate_mb_per_min') and 
+            snapshot.growth_rate_mb_per_min and 
+            snapshot.growth_rate_mb_per_min > 100):  # Increased from 50 to 100 MB/min
+            alert_type = 'rapid_growth'
+            if self._should_send_alert(alert_type, current_time):
+                alerts_to_add.append(MemoryAlert(
+                    timestamp=current_time,
+                    alert_type=alert_type,
+                    message=f"Rapid memory growth: {snapshot.growth_rate_mb_per_min:.1f}MB/min",
+                    memory_mb=snapshot.rss_mb,
+                    severity='warning'
+                ))
+        
+        # Add new alerts and enforce limit
+        for alert in alerts_to_add:
+            self._alerts.append(alert)
+            logger.warning(f"Memory Alert: {alert.message}")
+            
+        # Enforce alert limit - keep only the most recent alerts
+        if len(self._alerts) > self._max_alerts:
+            excess = len(self._alerts) - self._max_alerts
+            self._alerts = self._alerts[excess:]
 
 
 # Global memory monitor instance
@@ -2393,23 +2506,56 @@ class OperationMetrics:
     failed_requests: int = 0
     timeout_requests: int = 0
     
-    # Latency tracking
-    latency_measurements: deque = field(default_factory=lambda: deque(maxlen=1000))
+    # Latency tracking (reduced sizes to save memory)
+    latency_measurements: deque = field(default_factory=lambda: deque(maxlen=100))  # Reduced from 500
     latency_buckets: Dict[float, int] = field(default_factory=dict)
+    _max_latency_buckets: int = field(default=50, init=False)  # Limit bucket size
     
     # Computed metrics
     current_percentiles: Dict[int, float] = field(default_factory=dict)
     current_timeout_ms: float = 10000
     average_latency_ms: float = 0.0
     
-    # Throughput tracking
-    request_timestamps: deque = field(default_factory=lambda: deque(maxlen=2000))
+    # Throughput tracking (reduced size to save memory)
+    request_timestamps: deque = field(default_factory=lambda: deque(maxlen=200))  # Reduced from 1000
     current_throughput_rps: float = 0.0
     current_error_rate: float = 0.0
     
-    # Timing
+    # Timing and cleanup
     last_percentile_calculation: float = 0.0
+    last_cleanup: float = field(default_factory=time.time, init=False)
     
+    def add_latency_bucket(self, bucket: float) -> None:
+        """Add to latency bucket with size limit enforcement."""
+        if bucket not in self.latency_buckets:
+            # If we're at max buckets, remove the largest bucket
+            if len(self.latency_buckets) >= self._max_latency_buckets:
+                largest_bucket = max(self.latency_buckets.keys())
+                del self.latency_buckets[largest_bucket]
+            self.latency_buckets[bucket] = 0
+        self.latency_buckets[bucket] += 1
+    
+    def cleanup_old_data(self) -> None:
+        """Clean up old data to prevent memory growth."""
+        current_time = time.time()
+        
+        # Only cleanup every 5 minutes to avoid overhead
+        if current_time - self.last_cleanup < 300:
+            return
+            
+        # Clean old request timestamps (keep only last hour)
+        cutoff_time = current_time - 3600  # 1 hour
+        while self.request_timestamps and self.request_timestamps[0] < cutoff_time:
+            self.request_timestamps.popleft()
+            
+        # Reset buckets if they get too large
+        if len(self.latency_buckets) > self._max_latency_buckets:
+            # Keep only the most frequently used buckets
+            sorted_buckets = sorted(self.latency_buckets.items(), key=lambda x: x[1], reverse=True)
+            self.latency_buckets = dict(sorted_buckets[:self._max_latency_buckets])
+        
+        self.last_cleanup = current_time
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert metrics to dictionary."""
         return {
@@ -2422,7 +2568,7 @@ class OperationMetrics:
             'average_latency_ms': self.average_latency_ms,
             'current_throughput_rps': self.current_throughput_rps,
             'current_error_rate': self.current_error_rate,
-            'latency_buckets': self.latency_buckets
+            'latency_buckets': dict(list(self.latency_buckets.items())[:20])  # Limit output size
         }
 
 
@@ -2503,23 +2649,24 @@ class PerformanceMetricsCollector:
             # Record latency
             metrics.latency_measurements.append(duration_ms)
             
-            # Update latency buckets
+            # Update latency buckets using the new method with size limits
             for bucket in self.config.latency_buckets:
                 if duration_ms <= bucket:
-                    if bucket not in metrics.latency_buckets:
-                        metrics.latency_buckets[bucket] = 0
-                    metrics.latency_buckets[bucket] += 1
+                    metrics.add_latency_bucket(bucket)
                     break
             
             # Update average latency
             if metrics.latency_measurements:
                 metrics.average_latency_ms = statistics.mean(metrics.latency_measurements)
             
-            # Periodically update computed metrics
+            # Periodically update computed metrics and cleanup
             current_time = time.time()
             if (current_time - metrics.last_percentile_calculation) >= self.config.percentile_calculation_interval:
                 self._update_computed_metrics(operation)
                 metrics.last_percentile_calculation = current_time
+                
+            # Cleanup old data periodically
+            metrics.cleanup_old_data()
     
     def _update_computed_metrics(self, operation: str) -> None:
         """Update computed metrics like percentiles, throughput, and timeouts."""
@@ -2686,25 +2833,42 @@ class PerformanceMetricsCollector:
             }
     
     def cleanup_old_data(self) -> None:
-        """Clean up old metrics data to prevent memory bloat."""
+        """Clean up old metrics data to prevent unbounded memory growth."""
         current_time = time.time()
         
-        # Only cleanup every 5 minutes
+        # Only run cleanup every 5 minutes to avoid overhead
         if current_time - self._last_cleanup_time < 300:
             return
-        
+            
         with self._lock:
-            cutoff_time = current_time - (2 * self.config.throughput_window_seconds)
+            # Limit total number of operation types tracked (prevent unbounded growth)
+            max_operations = 100  # Reasonable limit for operation types
+            if len(self._metrics) > max_operations:
+                # Remove least recently used operations
+                sorted_ops = sorted(
+                    self._metrics.items(),
+                    key=lambda x: x[1].last_percentile_calculation
+                )
+                operations_to_remove = sorted_ops[:len(self._metrics) - max_operations]
+                for op_name, _ in operations_to_remove:
+                    del self._metrics[op_name]
+                logger.info(f"Cleaned up {len(operations_to_remove)} old operation metrics")
             
-            for metrics in self._metrics.values():
-                # Clean old timestamps
-                while (metrics.request_timestamps and 
-                       metrics.request_timestamps[0] < cutoff_time):
-                    metrics.request_timestamps.popleft()
-            
-            self._last_cleanup_time = current_time
+            # Clean up individual operation metrics
+            for operation, metrics in self._metrics.items():
+                metrics.cleanup_old_data()
+                
+                # Reset excessive counters to prevent overflow
+                if metrics.total_requests > 1000000:  # 1M requests
+                    # Scale down all counters proportionally
+                    scale_factor = 0.1
+                    metrics.total_requests = int(metrics.total_requests * scale_factor)
+                    metrics.successful_requests = int(metrics.successful_requests * scale_factor)
+                    metrics.failed_requests = int(metrics.failed_requests * scale_factor)
+                    metrics.timeout_requests = int(metrics.timeout_requests * scale_factor)
+                    logger.info(f"Scaled down counters for operation {operation}")
         
-        logger.debug("Cleaned up old metrics data")
+        self._last_cleanup_time = current_time
 
 
 # Global metrics collector instance
@@ -2742,12 +2906,22 @@ class StreamingManager:
         self.config = config
         self._active_streams: Dict[str, asyncio.Task] = {}
         self._stream_stats: Dict[str, Dict[str, Any]] = {}
+        self._max_stream_stats = 100  # Limit stream stats to prevent memory growth
         self.logger = logging.getLogger(__name__)
         
     async def stream_results(self, data_generator: AsyncIterator[Any], stream_id: str = None) -> AsyncIterator[List[Any]]:
         """Stream large result sets with chunking and backpressure control."""
         if stream_id is None:
             stream_id = f"stream_{int(time.time() * 1000)}"
+        
+        # Enforce stream stats limit to prevent memory growth
+        if len(self._stream_stats) >= self._max_stream_stats:
+            # Remove oldest stream stats
+            oldest_stream = min(
+                self._stream_stats.keys(),
+                key=lambda k: self._stream_stats[k].get('start_time', 0)
+            )
+            del self._stream_stats[oldest_stream]
             
         self._stream_stats[stream_id] = {
             "start_time": time.time(),

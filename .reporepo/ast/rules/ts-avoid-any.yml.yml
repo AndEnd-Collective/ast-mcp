@@ -1,0 +1,9 @@
+id: ts-avoid-any
+language: typescript
+rule:
+  pattern: ': any'
+message: Avoid using any type, use specific types instead
+note: The any type disables TypeScript type checking. Use specific types for better
+  type safety.
+severity: warning
+fix: Replace any with specific type like string, number, object, etc.

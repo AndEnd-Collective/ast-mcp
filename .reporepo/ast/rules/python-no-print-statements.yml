@@ -1,0 +1,8 @@
+id: python-no-print-statements
+language: python
+rule:
+  pattern: print($ARGS)
+message: Use logging instead of print statements in production code
+note: Print statements should be replaced with proper logging for production code
+severity: info
+fix: Use logger.info(), logger.debug(), etc. instead

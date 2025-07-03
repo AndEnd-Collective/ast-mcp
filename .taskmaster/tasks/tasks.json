@@ -1012,11 +1012,56 @@
             "testStrategy": ""
           }
         ]
+      },
+      {
+        "id": 28,
+        "title": "Create create-config-file tool: Implement a simple MCP tool that creates an sgconfig.yml file in .reporepo/ast/* directory structure following the ast-grep documentation",
+        "description": "Implement an MCP tool that creates the standard ast-grep configuration file (sgconfig.yml) with proper directory structure and default settings for rule organization.",
+        "details": "Implement the 'create_config_file' MCP tool using @mcp.tool decorator that creates a complete ast-grep project configuration. The tool should: 1) Create the .reporepo/ast/ directory structure using pathlib.Path.mkdir(parents=True, exist_ok=True), 2) Generate a properly formatted sgconfig.yml file with default configuration including 'ruleDirs: [rules]' to specify the rules directory, 'testDirs: [test]' for test files, and optional language-specific settings, 3) Create the rules/ and test/ subdirectories within the ast/ directory, 4) Include proper YAML formatting using PyYAML library with safe_dump for consistent output, 5) Add validation to check if sgconfig.yml already exists and provide options to overwrite or skip, 6) Include error handling for file system permissions and path validation using the existing SecurityManager for path traversal protection, 7) Support optional parameters for custom rule directory names and additional configuration options, 8) Generate example rule files in the rules/ directory with basic pattern examples for common languages, 9) Create a .gitignore file in the ast/ directory to exclude temporary files and build artifacts, 10) Provide detailed success/failure feedback with file paths and next steps for users.",
+        "testStrategy": "Test directory creation with various path scenarios including existing and non-existing parent directories, validate sgconfig.yml content format and YAML syntax correctness, test file overwrite behavior and user confirmation prompts, verify proper error handling for permission denied scenarios, test path validation and security measures against path traversal attacks, validate creation of subdirectories (rules/, test/) and example files, test tool execution with different parameter combinations, and verify integration with existing MCP server infrastructure.",
+        "status": "done",
+        "dependencies": [
+          25,
+          27
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 29,
+        "title": "Create read-config tool: Implement MCP tool for reading sgconfig.yml files",
+        "description": "Implement an MCP tool that reads sgconfig.yml files from .reporepo/ast/* directories and returns their contents in a structured format with proper error handling.",
+        "details": "Implement the 'read_config' MCP tool using @mcp.tool decorator that safely reads and parses ast-grep configuration files. The tool should: 1) Accept a path parameter (optional, defaults to current directory) and construct the full path to .reporepo/ast/sgconfig.yml using pathlib.Path for cross-platform compatibility, 2) Implement robust file existence checking with pathlib.Path.exists() and provide clear error messages when files are not found, 3) Use PyYAML's safe_load() function to parse YAML content securely, avoiding potential code execution vulnerabilities from yaml.load(), 4) Return structured configuration data including ruleDirs, testDirs, language settings, and any custom configuration options, 5) Handle YAML parsing errors gracefully with specific error messages for malformed YAML syntax, 6) Implement proper exception handling for file permission errors, encoding issues, and other I/O exceptions, 7) Include input validation using pydantic models to ensure path parameters are safe and prevent path traversal attacks, 8) Add optional schema validation to verify the sgconfig.yml follows expected ast-grep configuration format, 9) Support both absolute and relative path inputs with proper path resolution and normalization.",
+        "testStrategy": "Test file reading with existing and non-existing sgconfig.yml files to verify proper error handling, validate YAML parsing with well-formed and malformed YAML content including syntax errors and invalid structures, test path parameter handling with various input formats including relative paths, absolute paths, and edge cases like empty strings, verify security measures against path traversal attempts using '../' sequences, test file permission scenarios including read-only and inaccessible files, validate structured output format matches expected schema with all configuration fields properly parsed, test integration with the MCP server framework ensuring proper tool registration and parameter validation, and verify graceful error responses with appropriate HTTP status codes and error messages.",
+        "status": "done",
+        "dependencies": [
+          25,
+          27,
+          28
+        ],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": 30,
+        "title": "Create manage-config tool: Implement MCP tool for CRUD operations on ast-grep rules",
+        "description": "Implement a comprehensive MCP tool that provides full CRUD (Create, Read, Update, Delete) operations for managing individual ast-grep rule YAML files in the .reporepo/ast/rules/* directory structure.",
+        "details": "Implement the 'manage_config' MCP tool using @mcp.tool decorator that provides complete rule management functionality. The tool should: 1) Accept operation parameter ('create', 'read', 'update', 'delete') and rule_name parameter for the target YAML file, 2) Implement CREATE operation that generates new rule YAML files with proper ast-grep rule structure including 'id', 'message', 'severity', 'language', and 'rule' fields with pattern matching syntax, providing templates for common rule types (security, performance, style), 3) Implement READ operation that safely loads and parses existing rule files using PyYAML's safe_load(), returning structured rule content with metadata like file path, creation time, and validation status, 4) Implement UPDATE operation that modifies existing rules while preserving rule structure and validating changes against ast-grep rule schema, supporting partial updates and field-specific modifications, 5) Implement DELETE operation with confirmation prompts and backup creation before removal, 6) Include comprehensive rule validation using ast-grep's rule syntax requirements, validating pattern syntax, language compatibility, and required fields, 7) Implement rule dependency checking to prevent deletion of rules referenced by other rules, 8) Use pathlib.Path for cross-platform file operations and implement proper error handling for file permissions, invalid YAML syntax, and missing files, 9) Support batch operations for multiple rules and provide rule listing functionality with filtering by language, severity, or pattern type, 10) Include rule testing integration that validates rule patterns against sample code snippets and provides pattern matching verification.",
+        "testStrategy": "Test CREATE operation with various rule types and validate generated YAML structure and ast-grep compatibility, test READ operation with existing and non-existing rule files to verify proper error handling and content parsing, test UPDATE operation with partial and complete rule modifications ensuring data integrity and validation, test DELETE operation with confirmation handling and backup creation, validate rule syntax checking with both valid and invalid ast-grep patterns, test batch operations for multiple rules and verify transaction-like behavior, test file permission handling and error scenarios including read-only directories and corrupted YAML files, validate rule dependency detection and circular dependency prevention, test integration with ast-grep binary to verify rule functionality and pattern matching accuracy.",
+        "status": "done",
+        "dependencies": [
+          25,
+          27,
+          28,
+          29
+        ],
+        "priority": "medium",
+        "subtasks": []
       }
     ],
     "metadata": {
       "created": "2025-07-01T01:29:35.381Z",
-      "updated": "2025-07-01T20:06:42.820Z",
+      "updated": "2025-07-02T05:18:35.701Z",
       "description": "Tasks for master context"
     }
   }

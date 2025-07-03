@@ -1,0 +1,8 @@
+id: python-no-bare-except
+language: python
+rule:
+  pattern: "try:\n    $BODY\nexcept:\n    $HANDLER"
+message: Avoid bare except clauses - specify exception types
+note: Bare except clauses can hide programming errors and make debugging difficult
+severity: error
+fix: 'Specify exception type: except SpecificError:'

@@ -1,0 +1,8 @@
+id: rust-no-panic
+language: rust
+rule:
+  pattern: panic\!($MSG)
+message: Avoid using panic\! in library code
+note: panic\! should be avoided in library code
+severity: error
+fix: Return Result or Option instead

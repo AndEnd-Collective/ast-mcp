@@ -1,0 +1,8 @@
+id: js-use-strict-equality
+language: javascript
+rule:
+  pattern: $A == $B
+message: Use strict equality (===) instead of loose equality (==)
+note: Strict equality avoids unexpected type coercion
+severity: warning
+fix: Replace == with ===

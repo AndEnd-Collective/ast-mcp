@@ -1,0 +1,8 @@
+id: ts-unused-interface
+language: typescript
+rule:
+  pattern: interface $NAME { $BODY }
+message: Remove unused interface definitions
+note: Unused interfaces add unnecessary complexity to the codebase.
+severity: info
+fix: Remove unused interface or export it if needed elsewhere
