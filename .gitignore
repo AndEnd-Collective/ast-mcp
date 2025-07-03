@@ -228,6 +228,30 @@ node_modules/
 
 # tasks/ .reporepo/ast/
 
+# AI Coding Tools - Local Development Only
+# These folders contain AI coding assistant configurations and should remain local
+.clinerules/          # Cline coding assistant rules
+.cursor/              # Cursor AI editor configuration  
+.windsurf/            # Windsurf AI development environment
+.roo/                 # Roo AI coding assistant
+.trae/                # Trae AI development tools
+.roomodes             # Roo modes configuration
+AGENTS.md             # AI agent configuration files
+CLAUDE.md             # Claude-specific project instructions
+
+# TaskMaster AI
+.taskmaster/          # TaskMaster AI task management
+
+# Other AI Tools  
+.codeium/             # Codeium AI assistant
+.copilot/             # GitHub Copilot settings
+.tabnine/             # TabNine AI completion
+.kite/                # Kite AI assistant
+.sourcegraph/         # Sourcegraph AI code intelligence
+.codegpt/             # CodeGPT configurations
+.continue/            # Continue.dev AI assistant
+.aider/               # Aider AI coding assistant
+
 # Task files
 # tasks.json
 # tasks/ 
