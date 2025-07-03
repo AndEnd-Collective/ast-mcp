@@ -26,11 +26,57 @@ A powerful [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) serv
 
 ## 📋 Quick Start
 
-### Prerequisites
+### Installation
+
+#### For End Users (Recommended)
+```bash
+# Install from PyPI
+pip install ast-grep-mcp
+
+# Or install from GitHub
+pip install git+https://github.com/AndEnd-Org/ast-mcp.git
+```
+
+#### Prerequisites
 - Python 3.8+
 - [ast-grep](https://ast-grep.github.io/) installed and accessible in PATH
 
-### Installation
+```bash
+# Install AST-Grep
+# macOS (Homebrew)
+brew install ast-grep
+
+# Linux/macOS (Cargo)
+cargo install ast-grep
+
+# Or download from: https://github.com/ast-grep/ast-grep/releases
+```
+
+### MCP Client Configuration
+
+#### Claude Desktop
+Add to your `claude_desktop_config.json`:
+```json
+{
+  "mcpServers": {
+    "ast-grep-mcp": {
+      "command": "ast-grep-mcp",
+      "args": []
+    }
+  }
+}
+```
+
+**Location**:
+- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+
+#### Other MCP Clients
+Use the command `ast-grep-mcp` with stdio transport.
+
+See [INSTALL.md](INSTALL.md) for detailed installation instructions.
+
+### Developer Installation
 
 1. **Install ast-grep**:
    ```bash
