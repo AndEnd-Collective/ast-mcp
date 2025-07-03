@@ -4,19 +4,19 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ast-grep-mcp"
-version = "0.1.0"
-description = "MCP (Model Context Protocol) Server for AST-Grep - Advanced semantic code search and analysis"
+version = "1.0.0"
+description = "Production-ready MCP Server for AST-Grep with 25+ code quality rules across 5 languages"
 readme = "README.md"
 license = {text = "MIT"}
 authors = [
-    {name = "AST-Grep MCP Team", email = "info@example.com"}
+    {name = "AndEnd-Org", email = "contact@andend.org"}
 ]
 maintainers = [
-    {name = "AST-Grep MCP Team", email = "info@example.com"}
+    {name = "AndEnd-Org", email = "contact@andend.org"}
 ]
 keywords = ["ast-grep", "mcp", "code-analysis", "semantic-search", "static-analysis"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
@@ -62,10 +62,10 @@ test = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/example/ast-grep-mcp"
-"Bug Tracker" = "https://github.com/example/ast-grep-mcp/issues"
-"Repository" = "https://github.com/example/ast-grep-mcp"
-"Documentation" = "https://github.com/example/ast-grep-mcp#readme"
+"Homepage" = "https://github.com/AndEnd-Org/ast-mcp"
+"Bug Tracker" = "https://github.com/AndEnd-Org/ast-mcp/issues"
+"Repository" = "https://github.com/AndEnd-Org/ast-mcp"
+"Documentation" = "https://github.com/AndEnd-Org/ast-mcp#readme"
 
 [project.scripts]
 ast-grep-mcp = "ast_grep_mcp.server:main_sync"

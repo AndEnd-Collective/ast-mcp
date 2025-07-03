@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "ast-grep-mcp": {
+      "command": "ast-grep-mcp",
+      "args": [],
+      "env": {
+        "AST_GREP_ENABLE_PERFORMANCE": "true",
+        "AST_GREP_ENABLE_SECURITY": "true",
+        "AST_GREP_LOG_LEVEL": "INFO"
+      }
+    }
+  }
+}
