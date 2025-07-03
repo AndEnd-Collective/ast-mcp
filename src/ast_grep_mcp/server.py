@@ -1860,9 +1860,9 @@ class ASTGrepMCPServer:
                 logger.info("Shutting down enhanced logging system")
                 try:
                     shutdown_logging()
-                    # Use print for final logging message since logger may be shutdown
-                    print("Enhanced logging system shutdown complete", file=sys.stdout)
+                    # Logger may be shutdown, but avoid stdout to prevent MCP protocol issues
                 except Exception as e:
+                    # Send errors to stderr only to avoid interfering with MCP protocol
                     print(f"Error shutting down enhanced logging system: {e}", file=sys.stderr)
             
             # Step 7: Reset component states

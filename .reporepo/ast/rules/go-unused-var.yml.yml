@@ -1,0 +1,8 @@
+id: go-unused-var
+language: go
+rule:
+  pattern: var $NAME $TYPE
+message: Remove unused variables
+note: Unused variables make code harder to read and maintain.
+severity: info
+fix: Remove unused variable or use it in the code

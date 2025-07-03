@@ -1,0 +1,9 @@
+id: python-no-percent-formatting
+language: python
+rule:
+  pattern: $STR % $ARGS
+message: Use f-strings or .format() instead of % formatting for better readability
+note: Percent formatting is deprecated in favor of f-strings (Python 3.6+) or .format()
+  method
+severity: warning
+fix: Consider using f"..." or str.format() instead

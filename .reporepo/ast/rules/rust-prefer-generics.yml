@@ -1,0 +1,8 @@
+id: rust-prefer-generics
+language: rust
+rule:
+  pattern: Box<dyn $TRAIT>
+message: Consider using generics instead of Box<dyn Trait> for better performance
+note: Generics provide zero-cost abstractions vs trait objects
+severity: info
+fix: Use generic parameters when possible

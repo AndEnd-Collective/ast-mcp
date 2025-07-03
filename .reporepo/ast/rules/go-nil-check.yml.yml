@@ -1,0 +1,8 @@
+id: go-nil-check
+language: go
+rule:
+  pattern: $PTR.$FIELD
+message: Check for nil before dereferencing pointers
+note: Dereferencing nil pointers causes runtime panics.
+severity: warning
+fix: 'Add nil check: if ptr \!= nil { ptr.field }'

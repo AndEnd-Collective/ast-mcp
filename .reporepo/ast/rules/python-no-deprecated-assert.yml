@@ -1,0 +1,8 @@
+id: python-no-deprecated-assert
+language: python
+rule:
+  pattern: $OBJ.assertEquals($ARGS)
+message: Use assertEqual instead of deprecated assertEquals
+note: assertEquals has been deprecated since Python 3.2
+severity: warning
+fix: Replace with assertEqual()

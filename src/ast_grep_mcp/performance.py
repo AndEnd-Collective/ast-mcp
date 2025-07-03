@@ -1575,7 +1575,7 @@ class EnhancedPerformanceManager(PerformanceManager):
             await asyncio.gather(*self._monitoring_tasks, return_exceptions=True)
         
         if self._memory_monitor:
-            await self._memory_monitor.shutdown()
+            await self._memory_monitor.stop()
         await super().shutdown()
         
         logger.info("Enhanced performance manager shutdown complete")

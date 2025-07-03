@@ -1,0 +1,4 @@
+# ast-grep temporary files
+*.tmp
+*.bak
+.ast-grep-cache/

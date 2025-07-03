@@ -1,0 +1,8 @@
+id: ts-no-console
+language: typescript
+rule:
+  pattern: console.$METHOD($ARGS)
+message: Remove console statements from production code
+note: Console statements should not be present in production TypeScript code.
+severity: warning
+fix: Use proper logging library or remove console statements

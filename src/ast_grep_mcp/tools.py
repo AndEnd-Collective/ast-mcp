@@ -2081,31 +2081,6 @@ async def call_graph_generate_impl(input_data: CallGraphInput, ast_grep_path: Pa
         output_dir = Path(".reporepo/ast")
         output_dir.mkdir(parents=True, exist_ok=True)
         
-        # Check for recent cached results (within last 5 minutes)
-        call_graph_file = output_dir / "call-graph-base.json"
-        if call_graph_file.exists():
-            file_age = time.time() - call_graph_file.stat().st_mtime
-            if file_age < 300:  # 5 minutes cache
-                logger.info(f"Using cached call graph (age: {file_age:.1f}s)")
-                try:
-                    with open(call_graph_file, 'r') as f:
-                        cached_data = json.load(f)
-                    
-                    summary = {
-                        "status": "success (cached)",
-                        "files_created": [str(call_graph_file)],
-                        "summary": {
-                            "total_functions_found": len(cached_data.get("nodes", [])),
-                            "total_calls_found": len(cached_data.get("edges", [])),
-                            "cached_result": True,
-                            "cache_age_seconds": file_age
-                        }
-                    }
-                    return [TextContent(type="text", text=f"Call graph retrieved from cache:\n{json.dumps(summary, indent=2)}")]
-                except Exception as e:
-                    logger.warning(f"Failed to load cached call graph: {e}")
-                    # Continue with fresh generation
-        
         # Auto-detect languages if not specified
         languages = input_data.languages
         if not languages:
@@ -2128,70 +2103,36 @@ async def call_graph_generate_impl(input_data: CallGraphInput, ast_grep_path: Pa
                 # Get language-specific patterns
                 def_pattern, call_patterns = _get_language_patterns(language)
                 
-                # Create all tasks for this language with file filtering
+                # Create all tasks for this language
                 language_tasks = []
                 
-                # Build base args with file filtering for better performance
-                base_args = [
+                # Task for function definitions
+                def_args = [
                     str(ast_grep_path),
                     "run",
                     "--lang", language,
-                ]
-                
-                # Add file filtering to exclude large/irrelevant files
-                exclude_globs = [
-                    "__pycache__/**",
-                    "*.pyc",
-                    "*.min.js",
-                    "node_modules/**",
-                    ".git/**",
-                    "venv/**",
-                    ".venv/**",
-                    "env/**",
-                    ".env/**",
-                    "build/**",
-                    "dist/**",
-                    "target/**",
-                    "*.egg-info/**",
-                    ".tox/**",
-                    ".pytest_cache/**",
-                    ".mypy_cache/**",
-                    ".ruff_cache/**",
-                    "htmlcov/**",
-                    "*.log"
-                ]
-                
-                # Task for function definitions
-                def_args = base_args + [
                     "--pattern", def_pattern,
                     input_data.path,
                     "--json"
                 ]
+                language_tasks.append(_run_ast_grep_with_timeout(def_args, "definitions", language))
                 
-                # Add exclude patterns
-                for exclude in exclude_globs:
-                    def_args.extend(["--exclude-glob", exclude])
-                
-                language_tasks.append(_run_ast_grep_with_timeout(def_args, "definitions", language, timeout=8.0))
-                
-                # Only use 1 call pattern for speed (most important one)
-                if call_patterns:
-                    call_args = base_args + [
-                        "--pattern", call_patterns[0],  # Only use the first (most important) pattern
+                # Tasks for function calls (limit to 2 most important patterns for performance)
+                for i, pattern in enumerate(call_patterns[:2]):  # Limit to 2 patterns to prevent timeout
+                    call_args = [
+                        str(ast_grep_path),
+                        "run",
+                        "--lang", language,
+                        "--pattern", pattern,
                         input_data.path,
                         "--json"
                     ]
-                    
-                    # Add exclude patterns
-                    for exclude in exclude_globs:
-                        call_args.extend(["--exclude-glob", exclude])
-                    
-                    language_tasks.append(_run_ast_grep_with_timeout(call_args, "calls_0", language, timeout=8.0))
+                    language_tasks.append(_run_ast_grep_with_timeout(call_args, f"calls_{i}", language))
                 
-                # Execute all tasks for this language in parallel with shorter timeout
+                # Execute all tasks for this language in parallel with timeout
                 results = await asyncio.wait_for(
                     asyncio.gather(*language_tasks, return_exceptions=True),
-                    timeout=15.0  # 15 second timeout per language
+                    timeout=60.0  # 60 second timeout per language
                 )
                 
                 # Process results
@@ -2213,11 +2154,11 @@ async def call_graph_generate_impl(input_data: CallGraphInput, ast_grep_path: Pa
             
             return lang_definitions, lang_calls
         
-        # Run all languages in parallel with shorter total timeout
+        # Run all languages in parallel
         try:
             language_results = await asyncio.wait_for(
                 asyncio.gather(*[process_language(lang) for lang in languages], return_exceptions=True),
-                timeout=20.0  # 20 second total timeout for faster response
+                timeout=120.0  # 120 second total timeout
             )
             
             # Combine results from all languages
@@ -2324,10 +2265,10 @@ async def call_graph_generate_impl(input_data: CallGraphInput, ast_grep_path: Pa
         files_saved = []
         
         # Save main call graph
-        graph_output_file = output_dir / "call-graph-base.json"
-        with open(graph_output_file, 'w') as f:
+        call_graph_file = output_dir / "call-graph-base.json"
+        with open(call_graph_file, 'w') as f:
             json.dump(call_graph, f, indent=2)
-        files_saved.append(str(graph_output_file))
+        files_saved.append(str(call_graph_file))
         
         # Save function definitions
         definitions_file = output_dir / "function-definitions.json"
@@ -2390,18 +2331,7 @@ def _detect_languages_in_directory(directory_path: str) -> List[str]:
         '.bash': 'bash'
     }
     
-    # Directories to skip for performance
-    skip_dirs = {
-        'node_modules', '.git', '__pycache__', '.pytest_cache', 
-        'venv', 'env', '.venv', '.env', 'build', 'dist', 'target',
-        '.tox', '.coverage', 'htmlcov', '.mypy_cache', '.ruff_cache',
-        'egg-info', '.eggs', '.idea', '.vscode', '.vs'
-    }
-    
     detected_languages = set()
-    files_checked = 0
-    max_files_to_check = 50  # Limit file scanning for speed
-    
     try:
         path_obj = Path(directory_path)
         if path_obj.is_file():
@@ -2410,24 +2340,15 @@ def _detect_languages_in_directory(directory_path: str) -> List[str]:
             if suffix in language_mapping:
                 detected_languages.add(language_mapping[suffix])
         else:
-            # Directory - fast scan with limitations
+            # Directory - scan for files (limit depth to avoid performance issues)
             for file_path in path_obj.rglob('*'):
-                # Skip if we've checked enough files
-                if files_checked >= max_files_to_check:
-                    break
-                    
-                # Skip directories we don't want to scan
-                if any(skip_dir in str(file_path) for skip_dir in skip_dirs):
-                    continue
-                    
                 if file_path.is_file():
-                    files_checked += 1
                     suffix = file_path.suffix.lower()
                     if suffix in language_mapping:
                         detected_languages.add(language_mapping[suffix])
                     
-                    # Stop after finding 3 languages for speed
-                    if len(detected_languages) >= 3:
+                    # Stop after finding 10 languages to prevent excessive scanning
+                    if len(detected_languages) >= 10:
                         break
     except Exception as e:
         logger.warning(f"Error detecting languages in {directory_path}: {e}")
@@ -2473,7 +2394,7 @@ def _get_language_patterns(language: str) -> Tuple[str, List[str]]:
     return def_pattern, call_patterns
 
 
-async def _run_ast_grep_with_timeout(args: List[str], task_type: str, language: str, timeout: float = 8.0) -> Tuple[str, List[dict]]:
+async def _run_ast_grep_with_timeout(args: List[str], task_type: str, language: str, timeout: float = 60.0) -> Tuple[str, List[dict]]:
     """Run ast-grep command with timeout and return parsed results."""
     try:
         process = await asyncio.wait_for(
@@ -2671,6 +2592,99 @@ def register_tools(server: Server, ast_grep_path: Path) -> None:
                     },
                     "required": ["path"]
                 }
+            ),
+            Tool(
+                name="create_config_file",
+                description="Create ast-grep configuration file and directory structure in .reporepo/ast/",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "base_path": {
+                            "type": "string",
+                            "description": "Base directory path where .reporepo/ast/ will be created",
+                            "default": ".",
+                            "minLength": 1,
+                            "maxLength": 4096
+                        },
+                        "rules_dir": {
+                            "type": "string",
+                            "description": "Name of the rules directory",
+                            "default": "rules",
+                            "minLength": 1,
+                            "maxLength": 100
+                        },
+                        "test_dir": {
+                            "type": "string",
+                            "description": "Name of the test directory", 
+                            "default": "rule-tests",
+                            "minLength": 1,
+                            "maxLength": 100
+                        },
+                        "utils_dir": {
+                            "type": "string",
+                            "description": "Name of the utils directory",
+                            "default": "utils",
+                            "minLength": 1,
+                            "maxLength": 100
+                        },
+                        "overwrite": {
+                            "type": "boolean",
+                            "description": "Overwrite existing sgconfig.yml if it exists",
+                            "default": False
+                        }
+                    },
+                    "required": []
+                }
+            ),
+            Tool(
+                name="read_config",
+                description="Read and parse ast-grep configuration file from .reporepo/ast/",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "base_path": {
+                            "type": "string",
+                            "description": "Base directory path where .reporepo/ast/ is located",
+                            "default": ".",
+                            "minLength": 1,
+                            "maxLength": 4096
+                        }
+                    },
+                    "required": []
+                }
+            ),
+            Tool(
+                name="manage_config",
+                description="Manage ast-grep rule files with full CRUD operations",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "operation": {
+                            "type": "string",
+                            "description": "Operation to perform: create, read, update, delete, list",
+                            "enum": ["create", "read", "update", "delete", "list"],
+                            "minLength": 1,
+                            "maxLength": 20
+                        },
+                        "rule_name": {
+                            "type": "string",
+                            "description": "Name of the rule (required for create, read, update, delete)",
+                            "maxLength": 100
+                        },
+                        "base_path": {
+                            "type": "string",
+                            "description": "Base directory path where .reporepo/ast/ is located",
+                            "default": ".",
+                            "minLength": 1,
+                            "maxLength": 4096
+                        },
+                        "rule_data": {
+                            "type": "object",
+                            "description": "Rule data for create/update operations"
+                        }
+                    },
+                    "required": ["operation"]
+                }
             )
         ]
     
@@ -2699,7 +2713,25 @@ def register_tools(server: Server, ast_grep_path: Path) -> None:
         input_data = CallGraphInput(**arguments)
         return await call_graph_generate_tool_impl(input_data, ast_grep_path)
     
-    logger.info("All AST-Grep tools registered successfully with schemas and implementations")
+    @server.call_tool()
+    async def create_config_file(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
+        """Create ast-grep configuration file and directory structure."""
+        input_data = CreateConfigInput(**arguments)
+        return await create_config_file_tool_impl(input_data)
+    
+    @server.call_tool()
+    async def read_config(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
+        """Read and parse ast-grep configuration file."""
+        input_data = ReadConfigInput(**arguments)
+        return await read_config_tool_impl(input_data)
+    
+    @server.call_tool()
+    async def manage_config(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
+        """Manage ast-grep rule files with full CRUD operations."""
+        input_data = ManageConfigInput(**arguments)
+        return await manage_config_tool_impl(input_data)
+    
+    logger.info("All AST-Grep tools (including config management) registered successfully with schemas and implementations")
 
 
 # Tool implementation functions to avoid conflicts with MCP handlers
@@ -3276,3 +3308,591 @@ def discover_and_validate_rules(config: Dict[str, Any]) -> Dict[str, List[Dict[s
     logger.info(f"Successfully loaded and validated {total_rules} rules from {len(all_rules)} directories")
     
     return all_rules
+
+
+# New Input Models for Config Management Tools
+
+class CreateConfigInput(BaseModel):
+    """Input model for create_config_file tool."""
+    base_path: str = Field(".", description="Base directory path where .reporepo/ast/ will be created", min_length=1, max_length=4096)
+    rules_dir: str = Field("rules", description="Name of the rules directory", min_length=1, max_length=100)
+    test_dir: str = Field("rule-tests", description="Name of the test directory", min_length=1, max_length=100)
+    utils_dir: str = Field("utils", description="Name of the utils directory", min_length=1, max_length=100)
+    overwrite: bool = Field(False, description="Overwrite existing sgconfig.yml if it exists")
+    
+    @field_validator('base_path')
+    @classmethod
+    def validate_base_path(cls, v: str) -> str:
+        """Validate base path input."""
+        if not v or not v.strip():
+            raise ValueError("Base path cannot be empty")
+        
+        # Sanitize the path
+        try:
+            sanitized = sanitize_path(v.strip())
+            return str(sanitized)
+        except Exception as e:
+            raise ValueError(f"Invalid base path: {e}")
+    
+    @field_validator('rules_dir', 'test_dir', 'utils_dir')
+    @classmethod
+    def validate_directory_name(cls, v: str) -> str:
+        """Validate directory name input."""
+        if not v or not v.strip():
+            raise ValueError("Directory name cannot be empty")
+        
+        # Check for invalid characters
+        invalid_chars = ['/', '\\', '..', '<', '>', ':', '"', '|', '?', '*']
+        for char in invalid_chars:
+            if char in v:
+                raise ValueError(f"Directory name cannot contain '{char}'")
+        
+        return v.strip()
+
+
+class ReadConfigInput(BaseModel):
+    """Input model for read_config tool."""
+    base_path: str = Field(".", description="Base directory path where .reporepo/ast/ is located", min_length=1, max_length=4096)
+    
+    @field_validator('base_path')
+    @classmethod
+    def validate_base_path(cls, v: str) -> str:
+        """Validate base path input."""
+        if not v or not v.strip():
+            raise ValueError("Base path cannot be empty")
+        
+        # Sanitize the path
+        try:
+            sanitized = sanitize_path(v.strip())
+            return str(sanitized)
+        except Exception as e:
+            raise ValueError(f"Invalid base path: {e}")
+
+
+class ManageConfigInput(BaseModel):
+    """Input model for manage_config tool."""
+    operation: str = Field(..., description="Operation to perform: create, read, update, delete, list", min_length=1, max_length=20)
+    rule_name: Optional[str] = Field(None, description="Name of the rule (required for create, read, update, delete)", max_length=100)
+    base_path: str = Field(".", description="Base directory path where .reporepo/ast/ is located", min_length=1, max_length=4096)
+    rule_data: Optional[Dict[str, Any]] = Field(None, description="Rule data for create/update operations")
+    
+    @field_validator('operation')
+    @classmethod
+    def validate_operation(cls, v: str) -> str:
+        """Validate operation type."""
+        valid_operations = ['create', 'read', 'update', 'delete', 'list']
+        if v.lower() not in valid_operations:
+            raise ValueError(f"Operation must be one of {valid_operations}")
+        return v.lower()
+    
+    @field_validator('base_path')
+    @classmethod
+    def validate_base_path(cls, v: str) -> str:
+        """Validate base path input."""
+        if not v or not v.strip():
+            raise ValueError("Base path cannot be empty")
+        
+        # Sanitize the path
+        try:
+            sanitized = sanitize_path(v.strip())
+            return str(sanitized)
+        except Exception as e:
+            raise ValueError(f"Invalid base path: {e}")
+    
+    @field_validator('rule_name')
+    @classmethod
+    def validate_rule_name(cls, v: Optional[str]) -> Optional[str]:
+        """Validate rule name input."""
+        if v is None:
+            return v
+        
+        if not v.strip():
+            raise ValueError("Rule name cannot be empty")
+        
+        # Check for invalid characters
+        invalid_chars = ['/', '\\', '..', '<', '>', ':', '"', '|', '?', '*']
+        for char in invalid_chars:
+            if char in v:
+                raise ValueError(f"Rule name cannot contain '{char}'")
+        
+        return v.strip()
+    
+    @classmethod
+    def model_validate(cls, obj):
+        """Custom validation for operation-specific requirements."""
+        instance = super().model_validate(obj)
+        
+        # Check if rule_name is required for certain operations
+        if instance.operation in ['create', 'read', 'update', 'delete'] and not instance.rule_name:
+            raise ValueError(f"rule_name is required for '{instance.operation}' operation")
+        
+        # Check if rule_data is required for create/update operations
+        if instance.operation in ['create', 'update'] and not instance.rule_data:
+            raise ValueError(f"rule_data is required for '{instance.operation}' operation")
+        
+        return instance
+
+
+# Config Management Tool Implementations
+
+@audit_operation("create_config_file", SecurityLevel.RESTRICTED)
+async def create_config_file_impl(input_data: CreateConfigInput) -> List[TextContent]:
+    """Create ast-grep configuration file and directory structure following ast-grep documentation.
+    
+    Args:
+        input_data: CreateConfigInput with configuration parameters
+        
+    Returns:
+        List[TextContent]: Success/error messages with created file paths
+    """
+    try:
+        base_path = Path(input_data.base_path)
+        ast_config_dir = base_path / ".reporepo" / "ast"
+        
+        # Create the directory structure
+        ast_config_dir.mkdir(parents=True, exist_ok=True)
+        
+        rules_dir = ast_config_dir / input_data.rules_dir
+        test_dir = ast_config_dir / input_data.test_dir  
+        utils_dir = ast_config_dir / input_data.utils_dir
+        
+        # Create subdirectories
+        rules_dir.mkdir(exist_ok=True)
+        test_dir.mkdir(exist_ok=True)
+        utils_dir.mkdir(exist_ok=True)
+        
+        # Create sgconfig.yml file following ast-grep documentation
+        sgconfig_path = ast_config_dir / "sgconfig.yml"
+        
+        if sgconfig_path.exists() and not input_data.overwrite:
+            return [TextContent(
+                type="text",
+                text=json.dumps({
+                    "success": False,
+                    "error": f"sgconfig.yml already exists at {sgconfig_path}. Use overwrite=true to replace it.",
+                    "existing_file": str(sgconfig_path)
+                }, indent=2)
+            )]
+        
+        # Create sgconfig.yml content following ast-grep documentation format
+        config_content = {
+            "ruleDirs": [input_data.rules_dir],
+            "testConfigs": [{
+                "testDir": input_data.test_dir
+            }],
+            "utilDirs": [input_data.utils_dir]
+        }
+        
+        with open(sgconfig_path, 'w', encoding='utf-8') as f:
+            yaml.safe_dump(config_content, f, default_flow_style=False, sort_keys=False)
+        
+        # Create example rule file following ast-grep documentation
+        example_rule_path = rules_dir / "example-rule.yml"
+        if not example_rule_path.exists():
+            example_rule = {
+                "id": "example-rule",
+                "message": "This is an example rule. Modify or delete as needed.",
+                "severity": "info",
+                "language": "JavaScript",
+                "rule": {
+                    "pattern": "console.log($MSG)"
+                },
+                "note": "Example rule that matches console.log statements. See ast-grep documentation for more patterns."
+            }
+            
+            with open(example_rule_path, 'w', encoding='utf-8') as f:
+                yaml.safe_dump(example_rule, f, default_flow_style=False, sort_keys=False)
+        
+        # Create .gitignore for the ast directory
+        gitignore_path = ast_config_dir / ".gitignore"
+        gitignore_content = """# ast-grep temporary files
+*.tmp
+*.bak
+.ast-grep-cache/
+"""
+        
+        with open(gitignore_path, 'w', encoding='utf-8') as f:
+            f.write(gitignore_content)
+        
+        # Create README file with usage instructions
+        readme_path = ast_config_dir / "README.md"
+        readme_content = f"""# AST-Grep Configuration
+
+This directory contains the ast-grep configuration and rules for this project.
+
+## Structure
+
+- `sgconfig.yml` - Main configuration file
+- `{input_data.rules_dir}/` - Rule files directory
+- `{input_data.test_dir}/` - Test files directory  
+- `{input_data.utils_dir}/` - Utility rules directory
+
+## Usage
+
+Run `ast-grep scan` from the project root to scan code with the configured rules.
+
+See [ast-grep documentation](https://ast-grep.github.io/) for more information.
+"""
+        
+        with open(readme_path, 'w', encoding='utf-8') as f:
+            f.write(readme_content)
+        
+        result = {
+            "success": True,
+            "message": "AST-grep configuration created successfully",
+            "created_files": {
+                "config": str(sgconfig_path),
+                "example_rule": str(example_rule_path),
+                "gitignore": str(gitignore_path),
+                "readme": str(readme_path)
+            },
+            "created_directories": {
+                "base": str(ast_config_dir),
+                "rules": str(rules_dir),
+                "tests": str(test_dir),
+                "utils": str(utils_dir)
+            },
+            "next_steps": [
+                "Modify or delete the example rule file",
+                "Add your own rules to the rules directory",
+                "Run 'ast-grep scan' to test the configuration"
+            ]
+        }
+        
+        return [TextContent(type="text", text=json.dumps(result, indent=2))]
+        
+    except Exception as e:
+        logger.error(f"Error creating config file: {e}")
+        return [TextContent(
+            type="text", 
+            text=json.dumps({
+                "success": False,
+                "error": f"Failed to create config file: {str(e)}"
+            }, indent=2)
+        )]
+
+
+@audit_operation("read_config", SecurityLevel.RESTRICTED)
+async def read_config_impl(input_data: ReadConfigInput) -> List[TextContent]:
+    """Read and parse ast-grep configuration file.
+    
+    Args:
+        input_data: ReadConfigInput with path parameters
+        
+    Returns:
+        List[TextContent]: Configuration content or error message
+    """
+    try:
+        base_path = Path(input_data.base_path)
+        sgconfig_path = base_path / ".reporepo" / "ast" / "sgconfig.yml"
+        
+        if not sgconfig_path.exists():
+            return [TextContent(
+                type="text",
+                text=json.dumps({
+                    "success": False,
+                    "error": f"sgconfig.yml not found at {sgconfig_path}",
+                    "suggestion": "Use create_config_file tool to create the configuration first"
+                }, indent=2)
+            )]
+        
+        if not sgconfig_path.is_file():
+            return [TextContent(
+                type="text",
+                text=json.dumps({
+                    "success": False,
+                    "error": f"Path exists but is not a file: {sgconfig_path}"
+                }, indent=2)
+            )]
+        
+        # Read and parse the YAML file
+        with open(sgconfig_path, 'r', encoding='utf-8') as f:
+            config_content = yaml.safe_load(f)
+        
+        # Get file metadata
+        stat = sgconfig_path.stat()
+        
+        result = {
+            "success": True,
+            "config_path": str(sgconfig_path),
+            "config_content": config_content,
+            "metadata": {
+                "size_bytes": stat.st_size,
+                "modified_time": time.ctime(stat.st_mtime),
+                "created_time": time.ctime(stat.st_ctime)
+            }
+        }
+        
+        return [TextContent(type="text", text=json.dumps(result, indent=2))]
+        
+    except yaml.YAMLError as e:
+        logger.error(f"YAML parsing error: {e}")
+        return [TextContent(
+            type="text",
+            text=json.dumps({
+                "success": False,
+                "error": f"Invalid YAML syntax: {str(e)}"
+            }, indent=2)
+        )]
+    except Exception as e:
+        logger.error(f"Error reading config file: {e}")
+        return [TextContent(
+            type="text",
+            text=json.dumps({
+                "success": False,
+                "error": f"Failed to read config file: {str(e)}"
+            }, indent=2)
+        )]
+
+
+@audit_operation("manage_config", SecurityLevel.RESTRICTED)
+async def manage_config_impl(input_data: ManageConfigInput) -> List[TextContent]:
+    """Manage ast-grep rule files with full CRUD operations.
+    
+    Args:
+        input_data: ManageConfigInput with operation parameters
+        
+    Returns:
+        List[TextContent]: Operation result or error message
+    """
+    try:
+        base_path = Path(input_data.base_path)
+        ast_config_dir = base_path / ".reporepo" / "ast"
+        rules_dir = ast_config_dir / "rules"
+        
+        # Ensure rules directory exists
+        if not rules_dir.exists():
+            return [TextContent(
+                type="text",
+                text=json.dumps({
+                    "success": False,
+                    "error": f"Rules directory not found: {rules_dir}",
+                    "suggestion": "Use create_config_file tool first to set up the directory structure"
+                }, indent=2)
+            )]
+        
+        if input_data.operation == "list":
+            # List all rule files
+            rule_files = list(rules_dir.glob("*.yml")) + list(rules_dir.glob("*.yaml"))
+            rule_info = []
+            
+            for rule_file in rule_files:
+                try:
+                    with open(rule_file, 'r', encoding='utf-8') as f:
+                        rule_content = yaml.safe_load(f)
+                    
+                    stat = rule_file.stat()
+                    rule_info.append({
+                        "file": rule_file.name,
+                        "path": str(rule_file),
+                        "id": rule_content.get("id", "unknown"),
+                        "message": rule_content.get("message", "No message"),
+                        "language": rule_content.get("language", "unknown"),
+                        "severity": rule_content.get("severity", "unknown"),
+                        "size_bytes": stat.st_size,
+                        "modified": time.ctime(stat.st_mtime)
+                    })
+                except Exception as e:
+                    rule_info.append({
+                        "file": rule_file.name,
+                        "path": str(rule_file),
+                        "error": f"Failed to parse: {str(e)}"
+                    })
+            
+            result = {
+                "success": True,
+                "operation": "list",
+                "rules_directory": str(rules_dir),
+                "rule_count": len(rule_info),
+                "rules": rule_info
+            }
+            
+            return [TextContent(type="text", text=json.dumps(result, indent=2))]
+        
+        # For other operations, we need a rule name
+        if not input_data.rule_name:
+            return [TextContent(
+                type="text",
+                text=json.dumps({
+                    "success": False,
+                    "error": f"rule_name is required for '{input_data.operation}' operation"
+                }, indent=2)
+            )]
+        
+        rule_file_path = rules_dir / f"{input_data.rule_name}.yml"
+        
+        if input_data.operation == "create":
+            if rule_file_path.exists():
+                return [TextContent(
+                    type="text",
+                    text=json.dumps({
+                        "success": False,
+                        "error": f"Rule file already exists: {rule_file_path}",
+                        "suggestion": "Use 'update' operation to modify existing rules"
+                    }, indent=2)
+                )]
+            
+            # Create rule from provided data or template
+            if input_data.rule_data:
+                rule_content = input_data.rule_data
+            else:
+                # Create template rule
+                rule_content = {
+                    "id": input_data.rule_name,
+                    "message": "Add your rule message here",
+                    "severity": "error",
+                    "language": "JavaScript",
+                    "rule": {
+                        "pattern": "Your pattern here"
+                    },
+                    "note": "Modify this rule according to your needs"
+                }
+            
+            # Validate rule structure
+            validated_rule = _validate_rule_object(rule_content, input_data.rule_name)
+            
+            with open(rule_file_path, 'w', encoding='utf-8') as f:
+                yaml.safe_dump(validated_rule, f, default_flow_style=False, sort_keys=False)
+            
+            result = {
+                "success": True,
+                "operation": "create",
+                "rule_file": str(rule_file_path),
+                "rule_content": validated_rule
+            }
+            
+        elif input_data.operation == "read":
+            if not rule_file_path.exists():
+                return [TextContent(
+                    type="text",
+                    text=json.dumps({
+                        "success": False,
+                        "error": f"Rule file not found: {rule_file_path}"
+                    }, indent=2)
+                )]
+            
+            with open(rule_file_path, 'r', encoding='utf-8') as f:
+                rule_content = yaml.safe_load(f)
+            
+            stat = rule_file_path.stat()
+            
+            result = {
+                "success": True,
+                "operation": "read",
+                "rule_file": str(rule_file_path),
+                "rule_content": rule_content,
+                "metadata": {
+                    "size_bytes": stat.st_size,
+                    "modified_time": time.ctime(stat.st_mtime),
+                    "created_time": time.ctime(stat.st_ctime)
+                }
+            }
+            
+        elif input_data.operation == "update":
+            if not rule_file_path.exists():
+                return [TextContent(
+                    type="text",
+                    text=json.dumps({
+                        "success": False,
+                        "error": f"Rule file not found: {rule_file_path}",
+                        "suggestion": "Use 'create' operation to create new rules"
+                    }, indent=2)
+                )]
+            
+            if not input_data.rule_data:
+                return [TextContent(
+                    type="text",
+                    text=json.dumps({
+                        "success": False,
+                        "error": "rule_data is required for update operation"
+                    }, indent=2)
+                )]
+            
+            # Create backup
+            backup_path = rule_file_path.with_suffix('.yml.bak')
+            backup_path.write_bytes(rule_file_path.read_bytes())
+            
+            # Validate and update rule
+            validated_rule = _validate_rule_object(input_data.rule_data, input_data.rule_name)
+            
+            with open(rule_file_path, 'w', encoding='utf-8') as f:
+                yaml.safe_dump(validated_rule, f, default_flow_style=False, sort_keys=False)
+            
+            result = {
+                "success": True,
+                "operation": "update",
+                "rule_file": str(rule_file_path),
+                "backup_file": str(backup_path),
+                "rule_content": validated_rule
+            }
+            
+        elif input_data.operation == "delete":
+            if not rule_file_path.exists():
+                return [TextContent(
+                    type="text",
+                    text=json.dumps({
+                        "success": False,
+                        "error": f"Rule file not found: {rule_file_path}"
+                    }, indent=2)
+                )]
+            
+            # Create backup before deletion
+            backup_path = rule_file_path.with_suffix('.yml.deleted')
+            backup_path.write_bytes(rule_file_path.read_bytes())
+            
+            # Delete the rule file
+            rule_file_path.unlink()
+            
+            result = {
+                "success": True,
+                "operation": "delete",
+                "deleted_file": str(rule_file_path),
+                "backup_file": str(backup_path),
+                "message": "Rule file deleted successfully"
+            }
+        
+        return [TextContent(type="text", text=json.dumps(result, indent=2))]
+        
+    except yaml.YAMLError as e:
+        logger.error(f"YAML error in manage_config: {e}")
+        return [TextContent(
+            type="text",
+            text=json.dumps({
+                "success": False,
+                "error": f"YAML parsing error: {str(e)}"
+            }, indent=2)
+        )]
+    except ASTGrepValidationError as e:
+        logger.error(f"Rule validation error: {e}")
+        return [TextContent(
+            type="text",
+            text=json.dumps({
+                "success": False,
+                "error": f"Rule validation failed: {str(e)}"
+            }, indent=2)
+        )]
+    except Exception as e:
+        logger.error(f"Error in manage_config: {e}")
+        return [TextContent(
+            type="text",
+            text=json.dumps({
+                "success": False,
+                "error": f"Operation failed: {str(e)}"
+            }, indent=2)
+        )]
+
+
+# Config Management Tool Implementations
+async def create_config_file_tool_impl(input_data: CreateConfigInput) -> List[TextContent]:
+    """Implementation of create_config_file tool."""
+    return await create_config_file_impl(input_data)
+
+
+async def read_config_tool_impl(input_data: ReadConfigInput) -> List[TextContent]:
+    """Implementation of read_config tool."""
+    return await read_config_impl(input_data)
+
+
+async def manage_config_tool_impl(input_data: ManageConfigInput) -> List[TextContent]:
+    """Implementation of manage_config tool."""
+    return await manage_config_impl(input_data)

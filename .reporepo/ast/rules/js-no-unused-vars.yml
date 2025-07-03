@@ -1,0 +1,8 @@
+id: js-no-unused-vars
+language: javascript
+rule:
+  pattern: let $VAR;
+message: Variable is declared but never used
+note: Unused variables should be removed to improve code clarity
+severity: warning
+fix: Remove unused variable or use it

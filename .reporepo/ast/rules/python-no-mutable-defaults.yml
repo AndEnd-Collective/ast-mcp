@@ -1,0 +1,9 @@
+id: python-no-mutable-defaults
+language: python
+rule:
+  pattern: def $NAME($ARGS=[])
+message: Avoid mutable default arguments (list, dict, set)
+note: Mutable default arguments are shared between function calls, causing unexpected
+  behavior
+severity: error
+fix: Use None as default and create mutable object inside function

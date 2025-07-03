@@ -1,0 +1,8 @@
+id: js-no-function-in-block
+language: javascript
+rule:
+  pattern: "if ($CONDITION) {\n    function $NAME($ARGS) { $BODY }\n}"
+message: Avoid function declarations inside blocks
+note: Function declarations in blocks are not hoisted consistently across JS engines
+severity: error
+fix: Use function expressions or move outside block

@@ -1,0 +1,8 @@
+id: python-string-comparison
+language: python
+rule:
+  pattern: $VAR == ""
+message: Consider using string methods for string comparisons
+note: Direct string comparison may not be the most readable approach
+severity: info
+fix: Use "not var" or "len(var) == 0" for empty string checks

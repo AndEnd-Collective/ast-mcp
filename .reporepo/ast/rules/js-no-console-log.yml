@@ -1,0 +1,8 @@
+id: js-no-console-log
+language: javascript
+rule:
+  pattern: console.log($ARGS)
+message: Remove console.log statements from production code
+note: Console statements should not be in production code
+severity: info
+fix: Use proper logging library or remove

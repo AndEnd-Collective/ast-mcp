@@ -1,0 +1,8 @@
+id: rust-unnecessary-mut
+language: rust
+rule:
+  pattern: let mut $VAR = $VALUE;
+message: Variable declared as mut but never mutated
+note: Only use mut when variable will be modified
+severity: info
+fix: Remove mut keyword if variable is not mutated
