@@ -24,6 +24,28 @@ A powerful [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) serv
 - **Hot Reload**: Dynamic configuration updates without restart
 - **Comprehensive Documentation**: Deployment, configuration, API, and troubleshooting guides
 
+## 🎯 Vibe Coding with AST-Grep MCP
+
+**Transform your AI coding experience** - AST-Grep MCP enables AI assistants to understand code semantically, reducing token usage by 90% while providing surgical precision in code analysis.
+
+### Why AST-Grep for Vibe Coding?
+- **🚀 90% Token Reduction**: Semantic queries vs reading entire files
+- **🎯 Surgical Precision**: Find exactly what you need without context overload  
+- **⚡ Lightning Fast**: Skip file I/O with direct AST pattern matching
+- **🧠 Language Aware**: Understands syntax across 20+ programming languages
+- **🔍 Relationship Mapping**: Discover dependencies and call graphs instantly
+
+### Ready-to-Use Vibe Coding Rules
+```bash
+# Copy optimized rules for your AI assistant
+cp vibe-coding-rules/cursor/.cursorrules .cursorrules          # Cursor
+cp vibe-coding-rules/claude/system_prompt.txt ~/claude.txt     # Claude Desktop  
+```
+
+**Core Workflow**: `ast_grep_search` → `call_graph_generate` → `ast_grep_scan` → implement
+
+See [VIBE-CODING.md](VIBE-CODING.md) for detailed efficiency strategies and [vibe-coding-rules/](vibe-coding-rules/) for assistant-specific configurations.
+
 ## 📋 Quick Start
 
 ### Installation
