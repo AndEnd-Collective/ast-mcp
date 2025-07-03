@@ -18,7 +18,7 @@ import hashlib
 import logging
 from pathlib import Path
 from typing import Dict, Any, Optional, List, Union, Literal
-from datetime import datetime
+from datetime import datetime, timezone
 from dataclasses import dataclass, field
 from enum import Enum
 import base64
@@ -346,7 +346,7 @@ class ConfigurationManager:
     def _log_configuration_change(self, action: str, description: str):
         """Log configuration change for audit trail."""
         change_entry = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "action": action,
             "description": description,
             "config_hash": self._config_hash,
