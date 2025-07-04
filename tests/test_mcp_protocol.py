@@ -358,7 +358,7 @@ class MCPProtocolTester:
     async def run_all_tests(self):
         """Run comprehensive MCP protocol tests."""
         print("=" * 70)
-        print("🧪 AST-Grep MCP Protocol Compliance Test Suite")
+        print("🧪 AST-Grep MCP Protocol Compliance Test Suite - Optimized")
         print("=" * 70)
         
         # Setup with timeout
