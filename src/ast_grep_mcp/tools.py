@@ -2690,19 +2690,19 @@ def register_tools(server: Server, ast_grep_path: Path) -> None:
     
     # Then, register tool implementations
     @server.call_tool()
-    async def ast_grep_search(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
+    async def ast_grep_search(arguments: Dict[str, Any]) -> List[TextContent]:
         """Search for AST patterns in code using ast-grep."""
         input_data = SearchToolInput(**arguments)
         return await ast_grep_search_tool_impl(input_data, ast_grep_path)
     
     @server.call_tool()
-    async def ast_grep_scan(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
+    async def ast_grep_scan(arguments: Dict[str, Any]) -> List[TextContent]:
         """Scan codebase with predefined rules using ast-grep."""
         input_data = ScanToolInput(**arguments)
         return await ast_grep_scan_tool_impl(input_data, ast_grep_path)
     
     @server.call_tool()
-    async def ast_grep_run(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
+    async def ast_grep_run(arguments: Dict[str, Any]) -> List[TextContent]:
         """Run one-time queries with pattern and rewrite capabilities."""
         input_data = RunToolInput(**arguments)
         return await ast_grep_run_tool_impl(input_data, ast_grep_path)
