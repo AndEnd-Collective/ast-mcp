@@ -31,7 +31,7 @@ jobs:
     
     - name: Install AST-Grep for testing
       run: |
-        curl -L https://github.com/ast-grep/ast-grep/releases/latest/download/ast-grep-x86_64-unknown-linux-gnu.zip -o ast-grep.zip
+        curl -L https://github.com/ast-grep/ast-grep/releases/download/0.38.6/app-x86_64-unknown-linux-gnu.zip -o ast-grep.zip
         unzip ast-grep.zip
         chmod +x ast-grep-x86_64-unknown-linux-gnu/ast-grep
         sudo mv ast-grep-x86_64-unknown-linux-gnu/ast-grep /usr/local/bin/
