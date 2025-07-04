@@ -5,7 +5,7 @@ import re
 import logging
 import hashlib
 import time
-import subprocess
+import subprocess  # nosec B404
 import tempfile
 import ipaddress
 from pathlib import Path

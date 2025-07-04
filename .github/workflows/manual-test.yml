@@ -153,10 +153,13 @@ jobs:
         
     - name: Run custom command
       if: inputs.custom_command != ''
+      env:
+        CUSTOM_COMMAND: ${{ inputs.custom_command }}
       run: |
         echo "::group::Custom Command"
-        echo "Executing custom command: ${{ inputs.custom_command }}"
-        ${{ inputs.custom_command }}
+        echo "Executing custom command: $CUSTOM_COMMAND"
+        # Use shell variable instead of direct interpolation to prevent injection
+        eval "$CUSTOM_COMMAND"
         echo "::endgroup::"
         
     - name: Environment information
@@ -173,6 +176,8 @@ jobs:
         echo "::endgroup::"
         
     - name: Test summary
+      env:
+        CUSTOM_COMMAND: ${{ inputs.custom_command }}
       run: |
         echo "## 🧪 Manual Test Results" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
@@ -180,7 +185,7 @@ jobs:
         echo "- Test Suite: ${{ inputs.test_suite }}" >> $GITHUB_STEP_SUMMARY
         echo "- Python Version: ${{ inputs.python_version }}" >> $GITHUB_STEP_SUMMARY
         echo "- Debug Mode: ${{ inputs.debug_mode }}" >> $GITHUB_STEP_SUMMARY
-        echo "- Custom Command: ${{ inputs.custom_command || 'None' }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Custom Command: ${CUSTOM_COMMAND:-None}" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "**Status:** ✅ Tests completed successfully" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY

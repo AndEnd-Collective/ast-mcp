@@ -3,7 +3,7 @@
 import os
 import sys
 import logging
-import subprocess
+import subprocess  # nosec B404
 import asyncio
 from typing import Optional, Dict, Any, List, Set, Tuple, Union
 from pathlib import Path

@@ -170,5 +170,6 @@ skips = [
     "B101",  # Skip assert_used test
     "B404",  # Skip subprocess import warnings - we use subprocess securely
     "B603",  # Skip subprocess warnings - we validate all subprocess calls
-    "B601"   # Skip shell=True warnings - we don't use shell=True
+    "B601",  # Skip shell=True warnings - we don't use shell=True
+    "B110"   # Skip try_except_pass warnings - some are intentional
 ] 

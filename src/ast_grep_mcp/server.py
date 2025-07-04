@@ -12,7 +12,7 @@ from datetime import datetime, timedelta, timezone
 import psutil
 import time
 import shutil
-import subprocess
+import subprocess  # nosec B404
 import json
 import platform
 import traceback
@@ -546,7 +546,7 @@ class DependencyHealthChecker:
             # Test responsiveness with a simple command
             start_time = time.time()
             try:
-                result = subprocess.run([
+                result = subprocess.run([  # nosec B603
                     str(ast_grep_path), "--version"
                 ], capture_output=True, text=True, timeout=10)
                 

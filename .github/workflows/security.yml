@@ -21,7 +21,6 @@ jobs:
     - name: Run Semgrep security scan
       uses: semgrep/semgrep-action@v1
       with:
-        generateSarif: "1"
         config: |
           auto
           p/security-audit
