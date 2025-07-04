@@ -44,27 +44,33 @@ def check_dependencies():
     required_modules = [
         ("mcp", "Model Context Protocol"),
         ("pydantic", "Data validation"),
-        ("ast-grep-cli", "AST-Grep binary"),
     ]
     
     missing = []
     for module, description in required_modules:
         try:
-            if module == "ast-grep-cli":
-                # Special check for ast-grep binary
-                import importlib.util
-                spec = importlib.util.find_spec("ast_grep_cli")
-                if spec:
-                    print(f"✅ {description}")
-                else:
-                    print(f"❌ {description} - MISSING")
-                    missing.append((module, description))
-            else:
-                __import__(module.replace("-", "_"))
-                print(f"✅ {description}")
+            __import__(module.replace("-", "_"))
+            print(f"✅ {description}")
         except ImportError:
             print(f"❌ {description} - MISSING")
             missing.append((module, description))
+    
+    # Check for ast-grep binary availability (more robust check)
+    try:
+        import asyncio
+        sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+        from ast_grep_mcp.utils import find_ast_grep_binary
+        
+        async def check_ast_grep():
+            return await find_ast_grep_binary()
+        
+        ast_grep_path = asyncio.run(check_ast_grep())
+        if ast_grep_path:
+            print(f"✅ AST-Grep binary (found at: {ast_grep_path})")
+        else:
+            print(f"⚠️  AST-Grep binary - Not found, but tests will attempt to use embedded binary")
+    except Exception as e:
+        print(f"⚠️  AST-Grep check failed: {e} - Proceeding with tests")
     
     if missing:
         print(f"\n⚠️  Missing dependencies:")
