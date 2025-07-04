@@ -65,7 +65,7 @@ class ServerConfig:
     """Configuration for the AST-Grep MCP server."""
     
     def __init__(self):
-        self.name = os.getenv("AST_GREP_MCP_NAME", "ast-grep-mcp")
+        self.name = os.getenv("AST_GREP_MCP_NAME", "ast-mcp")
         self.version = os.getenv("AST_GREP_MCP_VERSION", "1.0.0")
         
         # Performance settings

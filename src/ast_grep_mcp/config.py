@@ -213,7 +213,7 @@ class ServerConfig(BaseModel):
     """Main server configuration."""
     
     # Basic server settings
-    name: str = Field("ast-grep-mcp", description="Server name")
+    name: str = Field("ast-mcp", description="Server name")
     version: str = Field("1.0.0", description="Server version")
     environment: EnvironmentType = Field(EnvironmentType.DEVELOPMENT, description="Environment type")
     debug: bool = Field(False, description="Enable debug mode")
@@ -241,7 +241,7 @@ class ConfigurationManager:
     def __init__(self, config_dir: Optional[Union[str, Path]] = None):
         """Initialize configuration manager."""
         self.config_dir = Path(config_dir) if config_dir else Path.cwd()
-        self.config_file_name = "ast-grep-mcp.yaml"
+        self.config_file_name = "ast-mcp.yaml"
         self.secrets_file_name = "secrets.yaml"
         self.config_schema_file = "config-schema.json"
         
@@ -531,7 +531,7 @@ class ConfigurationManager:
     
     def set_encryption_key(self, password: str):
         """Set encryption key for secrets management."""
-        salt = b'ast-grep-mcp-salt'  # In production, use a random salt
+        salt = b'ast-mcp-salt'  # In production, use a random salt
         kdf = PBKDF2HMAC(
             algorithm=hashes.SHA256(),
             length=32,

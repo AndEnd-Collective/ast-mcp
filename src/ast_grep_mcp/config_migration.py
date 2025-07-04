@@ -26,7 +26,7 @@ class LegacyServerConfig:
     
     def __init__(self):
         """Initialize legacy configuration from environment variables."""
-        self.name = os.getenv("AST_GREP_MCP_NAME", "ast-grep-mcp")
+        self.name = os.getenv("AST_GREP_MCP_NAME", "ast-mcp")
         self.version = os.getenv("AST_GREP_MCP_VERSION", "1.0.0")
         
         # Performance settings
