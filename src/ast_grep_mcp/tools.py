@@ -487,7 +487,7 @@ def create_admin_user_context(user_id: str, session_id: Optional[str] = None) ->
 # Pydantic models for tool inputs
 class SearchToolInput(BaseModel):
     """Input model for ast_grep_search tool."""
-    pattern: str = Field(..., description="AST pattern to search for (e.g., 'console.log($GREETING)')", min_length=1, max_length=8192)
+    pattern: str = Field(..., description="AST pattern to search for (e.g., 'console.log($GREETING)')", min_length=1, max_length=4000)
     language: str = Field(..., description="Programming language identifier (js, ts, py, rust, etc.)", min_length=1, max_length=50)
     path: str = Field(..., description="File or directory path to search", min_length=1, max_length=4096)
     recursive: bool = Field(True, description="Search recursively in directories")
@@ -516,6 +516,18 @@ class SearchToolInput(BaseModel):
         # Only block double && and || which could be shell operators
         if '&&' in v or '||' in v:
             raise ValueError("Shell operators && and || are not allowed in patterns")
+        
+        # Validate meta-variable syntax
+        import re
+        # Find all $ variables in the pattern
+        dollar_matches = re.findall(r'\$([A-Za-z_][A-Za-z0-9_]*|\d+|[^A-Za-z0-9_\s]|$)', v)
+        for match in dollar_matches:
+            if not match:  # Just $ at end of string
+                raise ValueError("Invalid meta-variable: '$' must be followed by a valid identifier")
+            if match.isdigit():  # $123
+                raise ValueError(f"Invalid meta-variable: '${match}' - numeric identifiers not allowed")
+            if len(match) == 1 and not match.isalnum() and match != '_':  # $@, $%, etc.
+                raise ValueError(f"Invalid meta-variable: '${match}' - special characters not allowed")
         
         return v.strip()
     
@@ -895,7 +907,7 @@ class CallGraphInput(BaseModel):
             raise ValueError("Languages must be a list of language identifiers")
         
         if not v:  # Empty list
-            return None
+            raise ValueError("Languages list cannot be empty. Provide at least one language or use None for auto-detection.")
         
         # Validate list size constraints
         if len(v) > 20:

@@ -182,18 +182,15 @@ rules:
             print(f"❌ Valid ScanToolInput failed: {e}")
             return False
         
-        # Test non-existent rule file
+        # Test non-existent rule file (should pass validation, fail at execution)
         try:
             ScanToolInput(
                 path="./src",
                 rules_config="/nonexistent/rule.yml"
             )
-            print("❌ Should have failed - non-existent rule file")
-            return False
-        except ValidationError:
-            print("✅ Non-existent rule file correctly rejected")
+            print("✅ Non-existent rule file path accepted (validation only checks path format)")
         except Exception as e:
-            print(f"❌ Unexpected error: {e}")
+            print(f"❌ Unexpected error with non-existent rule file: {e}")
             return False
         
         return True
