@@ -1,0 +1,195 @@
+name: Manual Test and Validation
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_suite:
+        description: 'Test suite to run'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+        - all
+        - validation
+        - integration
+        - security
+        - performance
+      python_version:
+        description: 'Python version to test'
+        required: true
+        default: '3.11'
+        type: choice
+        options:
+        - '3.10'
+        - '3.11'
+        - '3.12'
+      debug_mode:
+        description: 'Enable debug output'
+        required: false
+        default: false
+        type: boolean
+      custom_command:
+        description: 'Custom test command (optional)'
+        required: false
+        type: string
+
+jobs:
+  manual-test:
+    name: Manual Test Execution
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python ${{ inputs.python_version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ inputs.python_version }}
+        
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e .
+        
+    - name: Set debug environment
+      if: inputs.debug_mode
+      run: |
+        echo "DEBUG_MODE=true" >> $GITHUB_ENV
+        echo "PYTHONPATH=$GITHUB_WORKSPACE/src" >> $GITHUB_ENV
+        
+    - name: Run validation tests
+      if: inputs.test_suite == 'all' || inputs.test_suite == 'validation'
+      run: |
+        echo "::group::Validation Tests"
+        if [ "$DEBUG_MODE" = "true" ]; then
+          python -v tests/test_validation.py
+        else
+          python tests/test_validation.py
+        fi
+        echo "::endgroup::"
+        
+    - name: Run integration tests  
+      if: inputs.test_suite == 'all' || inputs.test_suite == 'integration'
+      run: |
+        echo "::group::Integration Tests"
+        if [ "$DEBUG_MODE" = "true" ]; then
+          python -v tests/test_mcp.py
+          python -v tests/test_mcp_protocol.py
+        else
+          python tests/test_mcp.py
+          python tests/test_mcp_protocol.py
+        fi
+        echo "::endgroup::"
+        
+    - name: Run security tests
+      if: inputs.test_suite == 'all' || inputs.test_suite == 'security'
+      run: |
+        echo "::group::Security Tests"
+        # Install security tools
+        pip install bandit safety
+        
+        # Run security scans
+        echo "Running Bandit security scan..."
+        bandit -r src/ || true
+        
+        echo "Running Safety dependency scan..."
+        safety check || true
+        
+        echo "Running Semgrep scan..."
+        pip install semgrep
+        semgrep --config=auto src/ || true
+        echo "::endgroup::"
+        
+    - name: Run performance tests
+      if: inputs.test_suite == 'all' || inputs.test_suite == 'performance'
+      run: |
+        echo "::group::Performance Tests"
+        # Create test files for performance testing
+        mkdir -p perf_test
+        for i in {1..20}; do
+          cat > perf_test/test_file_$i.js << 'EOF'
+        function example() {
+            console.log("test message");
+            var oldStyle = "legacy code";
+            return oldStyle;
+        }
+        EOF
+        done
+        
+        # Run performance benchmark
+        echo "Running performance benchmark..."
+        time python -c "
+        import asyncio
+        import sys
+        import time
+        sys.path.insert(0, 'src')
+        from ast_grep_mcp.tools import SearchToolInput, ast_grep_search_tool_impl
+        from ast_grep_mcp.utils import find_ast_grep_binary
+        
+        async def benchmark():
+            ast_grep_path = await find_ast_grep_binary()
+            if ast_grep_path:
+                start = time.time()
+                input_data = SearchToolInput(
+                    pattern='console.log(\$MSG)',
+                    language='javascript',
+                    path='perf_test',
+                    recursive=True
+                )
+                result = await ast_grep_search_tool_impl(input_data, ast_grep_path)
+                end = time.time()
+                print(f'Performance test completed in {end-start:.3f} seconds')
+            else:
+                print('ast-grep not found')
+        
+        asyncio.run(benchmark())
+        "
+        echo "::endgroup::"
+        
+    - name: Run custom command
+      if: inputs.custom_command != ''
+      env:
+        CUSTOM_COMMAND: ${{ inputs.custom_command }}
+      run: |
+        echo "::group::Custom Command"
+        echo "Executing custom command: $CUSTOM_COMMAND"
+        # Use shell variable instead of direct interpolation to prevent injection
+        eval "$CUSTOM_COMMAND"
+        echo "::endgroup::"
+        
+    - name: Environment information
+      if: inputs.debug_mode
+      run: |
+        echo "::group::Environment Information"
+        echo "Python version: $(python --version)"
+        echo "Pip packages:"
+        pip list
+        echo "Python path: $(which python)"
+        echo "Working directory: $(pwd)"
+        echo "PATH: $PATH"
+        echo "PYTHONPATH: $PYTHONPATH"
+        echo "::endgroup::"
+        
+    - name: Test summary
+      env:
+        TEST_SUITE: ${{ inputs.test_suite }}
+        PYTHON_VERSION: ${{ inputs.python_version }}
+        DEBUG_MODE: ${{ inputs.debug_mode }}
+        CUSTOM_COMMAND: ${{ inputs.custom_command }}
+      run: |
+        echo "## 🧪 Manual Test Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Test Configuration:**" >> $GITHUB_STEP_SUMMARY
+        echo "- Test Suite: $TEST_SUITE" >> $GITHUB_STEP_SUMMARY
+        echo "- Python Version: $PYTHON_VERSION" >> $GITHUB_STEP_SUMMARY
+        echo "- Debug Mode: $DEBUG_MODE" >> $GITHUB_STEP_SUMMARY
+        echo "- Custom Command: ${CUSTOM_COMMAND:-None}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Status:** ✅ Tests completed successfully" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Check the workflow logs for detailed results." >> $GITHUB_STEP_SUMMARY

@@ -3,7 +3,7 @@
 import os
 import sys
 import logging
-import subprocess
+import subprocess  # nosec B404
 import asyncio
 from typing import Optional, Dict, Any, List, Set, Tuple, Union
 from pathlib import Path
@@ -1802,7 +1802,7 @@ class ResourceManager:
                         
                 except Exception as e:
                     # Don't fail the process creation if preexec fails
-                    pass
+                    logger.debug(f"Failed to set resource limits in preexec: {e}")  # nosec B110 - intentional non-blocking
             
             kwargs['preexec_fn'] = preexec_fn
         
@@ -1832,8 +1832,8 @@ class ResourceManager:
                     'voluntary_context_switches': rusage.ru_nvcsw,
                     'involuntary_context_switches': rusage.ru_nivcsw
                 })
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Failed to get detailed resource usage: {e}")  # nosec B110 - intentional non-blocking
         
         return usage
 
