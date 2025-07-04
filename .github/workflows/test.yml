@@ -38,16 +38,6 @@ jobs:
     - name: Install system dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y curl
-        
-    - name: Install ast-grep binary
-      run: |
-        # Download and install ast-grep for testing
-        curl -L https://github.com/ast-grep/ast-grep/releases/download/0.38.6/ast-grep-x86_64-unknown-linux-gnu.tar.gz -o ast-grep.tar.gz
-        tar -xzf ast-grep.tar.gz
-        chmod +x ast-grep
-        sudo mv ast-grep /usr/local/bin/
-        ast-grep --version
         
     - name: Install Python dependencies
       run: |
@@ -61,7 +51,6 @@ jobs:
     - name: Verify installation
       run: |
         python -c "import ast_grep_mcp; print('Package installed successfully')"
-        ast-grep --version
         
     - name: Run validation tests
       run: |
