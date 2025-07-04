@@ -1,12 +1,71 @@
 #!/usr/bin/env python3
-"""Quick test script to verify enhanced Pydantic validation."""
+"""Comprehensive test script to verify enhanced Pydantic validation."""
 
 import sys
 import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+from pathlib import Path
+
+# Add the src directory to the path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 from ast_grep_mcp.tools import SearchToolInput, ScanToolInput, RunToolInput, CallGraphInput
 from pydantic import ValidationError
+
+# Mock the external dependencies for standalone testing
+class MockLanguageManager:
+    def validate_language_identifier(self, lang):
+        valid_langs = ['javascript', 'python', 'js', 'py', 'typescript', 'ts']
+        return lang in valid_langs
+    
+    def suggest_similar_languages(self, lang):
+        return ['javascript', 'python']
+
+def mock_get_language_manager():
+    return MockLanguageManager()
+
+def mock_sanitize_path(path_str):
+    return Path(path_str).resolve()
+
+# Apply mocks if needed
+try:
+    import ast_grep_mcp.tools
+    ast_grep_mcp.tools.get_language_manager = mock_get_language_manager
+    ast_grep_mcp.tools.sanitize_path = mock_sanitize_path
+except:
+    pass  # Ignore if modules not available
+
+def test_call_graph_input_validation():
+    """Test CallGraphInput validation enhancements."""
+    print("Testing CallGraphInput validation...")
+    
+    # Test valid input
+    try:
+        valid_input = CallGraphInput(
+            path="./src",
+            languages=["javascript", "python"],
+            include_external=False
+        )
+        print("✅ Valid CallGraphInput passes")
+    except Exception as e:
+        print(f"❌ Valid input failed: {e}")
+        return False
+    
+    # Test invalid language
+    try:
+        invalid_input = CallGraphInput(
+            path="./src",
+            languages=["invalid_language"],
+            include_external=False
+        )
+        print("❌ Invalid language should have failed")
+        return False
+    except ValidationError:
+        print("✅ Invalid language correctly rejected")
+    except Exception as e:
+        print(f"❌ Unexpected error: {e}")
+        return False
+    
+    return True
 
 def test_validation():
     """Test the enhanced Pydantic validation."""
