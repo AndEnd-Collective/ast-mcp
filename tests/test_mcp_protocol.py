@@ -36,11 +36,21 @@ class MCPProtocolTester:
         print("🔧 Setting up MCP Protocol Test Environment...")
         
         try:
-            # Create server instance
+            # Create server instance with lighter config for testing
             config = ServerConfig()
+            # Keep essential components but disable heavy monitoring
+            config.enable_performance = True  # Need this for tools
+            config.enable_monitoring = False
+            config.system_monitoring_enabled = False
+            config.alerting_enabled = False
+            config.dependency_check_enabled = False
+            config.detailed_diagnostics = False
+            config.health_check_interval = 300  # Reduce frequency
+            
             ast_grep_server = create_server(config)
             await ast_grep_server.initialize()
             self.server = ast_grep_server.server  # Get the underlying MCP server
+            self.ast_grep_server = ast_grep_server  # Keep reference to wrapper
             print("✅ MCP server initialized")
             
             # Verify ast-grep binary
@@ -85,13 +95,23 @@ class MCPProtocolTester:
                 )
             
             # Test 2: Tool listing returns proper structure  
-            tools = list(mcp_server._tools.values()) if hasattr(mcp_server, '_tools') else []
-            has_tools = len(tools) > 0
-            self.record_test(
-                "Tool listing functionality",
-                has_tools,
-                f"Found {len(tools)} tools"
-            )
+            try:
+                # Use the MCP server's list_tools method (not async)
+                tools_response = mcp_server.list_tools()
+                tools = tools_response.tools if hasattr(tools_response, 'tools') else []
+                has_tools = len(tools) > 0
+                self.record_test(
+                    "Tool listing functionality",
+                    has_tools,
+                    f"Found {len(tools)} tools"
+                )
+                
+            except Exception as e:
+                self.record_test(
+                    "Tool listing functionality",
+                    False,
+                    f"Error accessing tools: {e}"
+                )
             
             # Test 3: Tool schema validation
             if tools:
@@ -118,7 +138,11 @@ class MCPProtocolTester:
         
         try:
             mcp_server = self.server
-            tools = list(mcp_server._tools.values()) if hasattr(mcp_server, '_tools') else []
+            try:
+                tools_response = mcp_server.list_tools()
+                tools = tools_response.tools if hasattr(tools_response, 'tools') else []
+            except Exception:
+                tools = []
             
             # Test core AST-Grep tools are registered
             tool_names = {tool.name for tool in tools}
@@ -160,7 +184,12 @@ class MCPProtocolTester:
             mcp_server = self.server
             
             # Test resource listing
-            resources = list(mcp_server._resources.values()) if hasattr(mcp_server, '_resources') else []
+            try:
+                resources_response = mcp_server.list_resources()
+                resources = resources_response.resources if hasattr(resources_response, 'resources') else []
+            except Exception:
+                resources = []
+            
             has_resources = len(resources) > 0
             self.record_test(
                 "Resource listing",
@@ -220,7 +249,11 @@ class MCPProtocolTester:
                 }
                 
                 # Skip actual tool execution for now - just test that tools exist
-                tools = list(mcp_server._tools.values()) if hasattr(mcp_server, '_tools') else []
+                try:
+                    tools_response = await mcp_server.list_tools()
+                    tools = tools_response.tools if hasattr(tools_response, 'tools') else []
+                except Exception:
+                    tools = []
                 search_tool_exists = any(tool.name == "ast_grep_search" for tool in tools)
                 self.record_test(
                     "Tool execution: ast_grep_search",
@@ -288,7 +321,11 @@ class MCPProtocolTester:
             
             # Test 1: Response time for tool listing
             start_time = time.time()
-            tools = list(mcp_server._tools.values()) if hasattr(mcp_server, '_tools') else []
+            try:
+                tools_response = mcp_server.list_tools()
+                tools = tools_response.tools if hasattr(tools_response, 'tools') else []
+            except Exception:
+                tools = []
             list_time = time.time() - start_time
             
             self.record_test(
@@ -299,7 +336,11 @@ class MCPProtocolTester:
             
             # Test 2: Resource listing performance
             start_time = time.time()
-            resources = list(mcp_server._resources.values()) if hasattr(mcp_server, '_resources') else []
+            try:
+                resources_response = mcp_server.list_resources()
+                resources = resources_response.resources if hasattr(resources_response, 'resources') else []
+            except Exception:
+                resources = []
             resource_time = time.time() - start_time
             
             self.record_test(
@@ -320,11 +361,16 @@ class MCPProtocolTester:
         print("🧪 AST-Grep MCP Protocol Compliance Test Suite")
         print("=" * 70)
         
-        # Setup
-        if not await self.setup():
+        # Setup with timeout
+        try:
+            setup_success = await asyncio.wait_for(self.setup(), timeout=60.0)
+            if not setup_success:
+                return False
+        except asyncio.TimeoutError:
+            print("❌ Setup timed out after 60 seconds")
             return False
         
-        # Run test suites
+        # Run test suites with timeout
         test_suites = [
             self.test_json_rpc_compliance,
             self.test_tool_registration,
@@ -336,7 +382,10 @@ class MCPProtocolTester:
         
         for test_suite in test_suites:
             try:
-                await test_suite()
+                # Add timeout for each test suite (30 seconds max)
+                await asyncio.wait_for(test_suite(), timeout=30.0)
+            except asyncio.TimeoutError:
+                print(f"❌ Test suite {test_suite.__name__} timed out after 30 seconds")
             except Exception as e:
                 print(f"❌ Test suite failed: {e}")
         

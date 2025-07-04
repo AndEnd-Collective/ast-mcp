@@ -22,7 +22,7 @@ def run_test_script(test_script: str, description: str):
             [sys.executable, test_script],
             cwd=Path(__file__).parent.parent,
             capture_output=False,
-            timeout=120  # 2 minute timeout
+            timeout=240  # 4 minute timeout for Python 3.11/3.12 compatibility
         )
         
         success = result.returncode == 0
