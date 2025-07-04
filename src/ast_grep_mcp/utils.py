@@ -130,6 +130,31 @@ async def find_ast_grep_binary() -> Optional[Path]:
         if env_path_obj.exists() and env_path_obj.is_file():
             return env_path_obj
     
+    # Try to use embedded binary from ast-grep-cli package
+    try:
+        import importlib.util
+        import sys
+        
+        # Find ast-grep-cli package
+        spec = importlib.util.find_spec("ast_grep_cli")
+        if spec and spec.origin:
+            # Get the package directory
+            package_dir = Path(spec.origin).parent
+            
+            # Look for binary in package
+            binary_names = ["ast-grep", "sg", "ast_grep"]
+            for binary_name in binary_names:
+                binary_path = package_dir / binary_name
+                if binary_path.exists() and binary_path.is_file():
+                    return binary_path
+                
+                # Also check bin subdirectory
+                bin_path = package_dir / "bin" / binary_name
+                if bin_path.exists() and bin_path.is_file():
+                    return bin_path
+    except ImportError:
+        pass
+    
     # Common binary names to search for
     binary_names = ["ast-grep", "sg", "ast_grep"]
     

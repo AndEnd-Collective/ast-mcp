@@ -2,6 +2,22 @@
 
 A powerful [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server that provides AI assistants with semantic code search and analysis capabilities using [ast-grep](https://ast-grep.github.io/).
 
+## 🙏 Acknowledgments
+
+This project is built upon the incredible work of the [ast-grep](https://ast-grep.github.io/) project by [Herrington Darkholme](https://github.com/HerringtonDarkholme). ast-grep is a revolutionary tool that makes abstract syntax tree (AST) manipulation accessible and powerful for developers worldwide.
+
+**Special thanks to the ast-grep team for:**
+- Creating an intuitive, jQuery-like API for AST traversal
+- Supporting 20+ programming languages with consistent syntax
+- Providing excellent documentation and community support
+- Building a fast, reliable Rust-based foundation
+- Making semantic code search accessible to everyone
+
+🔗 **Learn more about ast-grep**: [https://ast-grep.github.io/](https://ast-grep.github.io/)  
+⭐ **Star the ast-grep project**: [https://github.com/ast-grep/ast-grep](https://github.com/ast-grep/ast-grep)
+
+This MCP server simply provides a bridge between AI assistants and the amazing capabilities that ast-grep already offers.
+
 ## 🚀 Features
 
 ### Core Capabilities
@@ -39,18 +55,9 @@ pip install git+https://github.com/AndEnd-Org/ast-mcp.git
 
 #### Prerequisites
 - Python 3.8+
-- [ast-grep](https://ast-grep.github.io/) installed and accessible in PATH
+- **No additional setup required!** The ast-grep binary is automatically included via the `ast-grep-cli` package dependency.
 
-```bash
-# Install AST-Grep
-# macOS (Homebrew)
-brew install ast-grep
-
-# Linux/macOS (Cargo)
-cargo install ast-grep
-
-# Or download from: https://github.com/ast-grep/ast-grep/releases
-```
+> **Note**: The ast-grep binary is automatically installed when you install this package. No manual installation of ast-grep is required!
 
 ### MCP Client Configuration
 
@@ -78,26 +85,16 @@ See [INSTALL.md](INSTALL.md) for detailed installation instructions.
 
 ### Developer Installation
 
-1. **Install ast-grep**:
+1. **Install the MCP server**:
    ```bash
-   # Via Cargo
-   cargo install ast-grep
-   
-   # Via npm
-   npm install -g @ast-grep/cli
-   
-   # Via Homebrew (macOS)
-   brew install ast-grep
-   ```
-
-2. **Install the MCP server**:
-   ```bash
-   git clone https://github.com/your-org/ast-grep-mcp.git
-   cd ast-grep-mcp
+   git clone https://github.com/AndEnd-Org/ast-mcp.git
+   cd ast-mcp
    pip install -e .
    ```
 
-3. **Basic configuration**:
+   > **Note**: The ast-grep binary is automatically installed as a dependency. No manual installation required!
+
+2. **Basic configuration**:
    ```bash
    # Create development configuration
    python scripts/config_manager.py create-template development --output config.yaml

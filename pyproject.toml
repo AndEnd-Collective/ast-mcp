@@ -40,6 +40,7 @@ dependencies = [
     "jsonschema>=4.0.0",
     "psutil>=5.0.0",
     "cryptography>=3.0.0",
+    "ast-grep-cli>=0.38.0",
 ]
 
 [project.optional-dependencies]
