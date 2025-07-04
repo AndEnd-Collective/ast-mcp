@@ -177,14 +177,17 @@ jobs:
         
     - name: Test summary
       env:
+        TEST_SUITE: ${{ inputs.test_suite }}
+        PYTHON_VERSION: ${{ inputs.python_version }}
+        DEBUG_MODE: ${{ inputs.debug_mode }}
         CUSTOM_COMMAND: ${{ inputs.custom_command }}
       run: |
         echo "## 🧪 Manual Test Results" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "**Test Configuration:**" >> $GITHUB_STEP_SUMMARY
-        echo "- Test Suite: ${{ inputs.test_suite }}" >> $GITHUB_STEP_SUMMARY
-        echo "- Python Version: ${{ inputs.python_version }}" >> $GITHUB_STEP_SUMMARY
-        echo "- Debug Mode: ${{ inputs.debug_mode }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Test Suite: $TEST_SUITE" >> $GITHUB_STEP_SUMMARY
+        echo "- Python Version: $PYTHON_VERSION" >> $GITHUB_STEP_SUMMARY
+        echo "- Debug Mode: $DEBUG_MODE" >> $GITHUB_STEP_SUMMARY
         echo "- Custom Command: ${CUSTOM_COMMAND:-None}" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "**Status:** ✅ Tests completed successfully" >> $GITHUB_STEP_SUMMARY
