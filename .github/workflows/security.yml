@@ -1,0 +1,274 @@
+name: Security Scanning
+
+on:
+  push:
+    branches: [ develop, feature/* ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run security scan daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  semgrep:
+    name: Semgrep Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Run Semgrep security scan
+      uses: semgrep/semgrep-action@v1
+      with:
+        # Generate SARIF report for GitHub Security tab
+        generateSarif: "1"
+        # Use Semgrep Registry rules for Python security
+        config: |
+          auto
+          p/security-audit
+          p/secrets
+          p/python
+          p/django
+          p/flask
+          p/bandit
+          p/owasp-top-ten
+        # Fail CI on high severity findings
+        auditOn: push
+        
+    - name: Upload SARIF file to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: semgrep.sarif
+        
+    - name: Upload Semgrep results as artifact
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: semgrep-results
+        path: semgrep.sarif
+
+  bandit:
+    name: Bandit Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+        
+    - name: Install bandit
+      run: |
+        python -m pip install --upgrade pip
+        pip install bandit[toml]
+        
+    - name: Run Bandit security scan
+      run: |
+        echo "Running Bandit security scan..."
+        bandit -r src/ -f json -o bandit-report.json || true
+        bandit -r src/ -f txt
+        
+    - name: Upload Bandit results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: bandit-results
+        path: bandit-report.json
+
+  safety:
+    name: Safety Dependency Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install safety
+        pip install -e .
+        
+    - name: Run Safety dependency scan
+      run: |
+        echo "Scanning for known security vulnerabilities in dependencies..."
+        safety check --json --output safety-report.json || true
+        safety check
+        
+    - name: Upload Safety results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: safety-results
+        path: safety-report.json
+
+  secrets-scan:
+    name: Secret Detection
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        # Fetch full history for secret scanning
+        fetch-depth: 0
+        
+    - name: Run GitLeaks secret detection
+      uses: gitleaks/gitleaks-action@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }} # Only required for Organizations, not needed for individual accounts.
+
+  codeql:
+    name: CodeQL Security Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v2
+      with:
+        languages: python
+        queries: security-extended,security-and-quality
+        
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v2
+      with:
+        category: "/language:python"
+
+  dockerfile-scan:
+    name: Dockerfile Security Scan
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Check for Dockerfile
+      id: dockerfile-check
+      run: |
+        if [ -f "Dockerfile" ]; then
+          echo "dockerfile-exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "dockerfile-exists=false" >> $GITHUB_OUTPUT
+        fi
+        
+    - name: Run Hadolint Dockerfile scan
+      if: steps.dockerfile-check.outputs.dockerfile-exists == 'true'
+      uses: hadolint/hadolint-action@v3.1.0
+      with:
+        dockerfile: Dockerfile
+        format: sarif
+        output-file: hadolint.sarif
+        
+    - name: Upload Hadolint SARIF
+      if: steps.dockerfile-check.outputs.dockerfile-exists == 'true'
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: hadolint.sarif
+
+  license-scan:
+    name: License Compliance Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pip-licenses
+        pip install -e .
+        
+    - name: Generate license report
+      run: |
+        echo "Generating license compliance report..."
+        pip-licenses --format=json --output-file=licenses.json
+        pip-licenses --format=table
+        
+    - name: Check for GPL licenses
+      run: |
+        echo "Checking for copyleft licenses..."
+        if pip-licenses | grep -E "(GPL|AGPL|LGPL)"; then
+          echo "WARNING: Copyleft licenses detected!"
+          echo "Please review license compatibility."
+        else
+          echo "No copyleft licenses detected."
+        fi
+        
+    - name: Upload license report
+      uses: actions/upload-artifact@v3
+      with:
+        name: license-report
+        path: licenses.json
+
+  security-summary:
+    name: Security Summary
+    runs-on: ubuntu-latest
+    needs: [semgrep, bandit, safety, secrets-scan, codeql]
+    if: always()
+    
+    steps:
+    - name: Security scan summary
+      run: |
+        echo "## 🔒 Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Tool | Status | Description |" >> $GITHUB_STEP_SUMMARY
+        echo "|------|--------|-------------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Semgrep | ${{ needs.semgrep.result }} | Static analysis security scanning |" >> $GITHUB_STEP_SUMMARY
+        echo "| Bandit | ${{ needs.bandit.result }} | Python security linter |" >> $GITHUB_STEP_SUMMARY
+        echo "| Safety | ${{ needs.safety.result }} | Dependency vulnerability scanning |" >> $GITHUB_STEP_SUMMARY
+        echo "| GitLeaks | ${{ needs.secrets-scan.result }} | Secret detection |" >> $GITHUB_STEP_SUMMARY
+        echo "| CodeQL | ${{ needs.codeql.result }} | Semantic code analysis |" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Determine overall security status
+        if [[ "${{ needs.semgrep.result }}" == "success" && "${{ needs.bandit.result }}" == "success" && "${{ needs.safety.result }}" == "success" && "${{ needs.secrets-scan.result }}" == "success" && "${{ needs.codeql.result }}" == "success" ]]; then
+          echo "### ✅ All security scans passed!" >> $GITHUB_STEP_SUMMARY
+          echo "status=success" >> $GITHUB_OUTPUT
+        else
+          echo "### ⚠️ Security issues detected!" >> $GITHUB_STEP_SUMMARY
+          echo "Please review the scan results and address any high-severity findings." >> $GITHUB_STEP_SUMMARY
+          echo "status=warning" >> $GITHUB_OUTPUT
+        fi
+        
+    - name: Comment on PR (if applicable)
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const status = '${{ steps.check.outputs.status }}';
+          const commentBody = status === 'success' ? 
+            '🔒 **Security Scan Results**: All security scans passed successfully! ✅' :
+            '🔒 **Security Scan Results**: Security issues detected. Please review the scan results. ⚠️';
+            
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: commentBody
+          });

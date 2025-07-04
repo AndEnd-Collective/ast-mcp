@@ -1,0 +1,34 @@
+# CODEOWNERS file for AST-Grep MCP Server
+# This file defines who should review specific parts of the codebase
+
+# Global fallback - require review from repository maintainers
+* @AndEnd-Org/maintainers
+
+# Core MCP server implementation
+/src/ast_grep_mcp/server.py @AndEnd-Org/core-maintainers
+/src/ast_grep_mcp/tools.py @AndEnd-Org/core-maintainers
+
+# Security-related files - require security team review
+/src/ast_grep_mcp/security.py @AndEnd-Org/security-team
+/.github/workflows/security.yml @AndEnd-Org/security-team
+
+# Configuration and deployment
+/src/ast_grep_mcp/config.py @AndEnd-Org/maintainers
+/.github/workflows/ @AndEnd-Org/devops-team
+/pyproject.toml @AndEnd-Org/maintainers
+
+# Documentation
+/docs/ @AndEnd-Org/documentation-team
+/README.md @AndEnd-Org/documentation-team
+/.github/pull_request_template.md @AndEnd-Org/documentation-team
+
+# Tests - require maintainer review
+/tests/ @AndEnd-Org/maintainers
+
+# Release and distribution
+/scripts/release.sh @AndEnd-Org/release-team
+/.github/workflows/release.yml @AndEnd-Org/release-team
+
+# Branch protection and repository configuration
+/.github/branch-protection-rules.md @AndEnd-Org/admin-team
+/.github/CODEOWNERS @AndEnd-Org/admin-team
