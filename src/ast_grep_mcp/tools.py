@@ -503,21 +503,19 @@ class SearchToolInput(BaseModel):
             raise ValueError("Pattern cannot be empty")
         
         # Basic security check for command injection
-        dangerous_chars = [';', '&', '|', '`', '$']
+        dangerous_chars = [';', '`']  # Remove & | $ from dangerous chars as they're AST-grep syntax
         for char in dangerous_chars:
             if char in v:
-                # Allow these characters in AST-grep patterns as they're part of the syntax
-                # Only flag if they appear in suspicious contexts
-                if char == '$' and not v.startswith('$'):
-                    # '$' is allowed for variables in AST-grep patterns like $VAR
-                    continue
-                if char in ['&', '|'] and char * 2 not in v:
-                    # Allow single & and | but not && or ||
-                    continue
                 raise ValueError(
                     f"Potentially dangerous character '{char}' detected in pattern. "
                     f"If this is intended AST-grep syntax, please verify the pattern is safe."
                 )
+        
+        # Allow $ for meta-variables (common in AST-grep patterns)
+        # Allow & and | as they're valid in AST-grep patterns
+        # Only block double && and || which could be shell operators
+        if '&&' in v or '||' in v:
+            raise ValueError("Shell operators && and || are not allowed in patterns")
         
         return v.strip()
     
@@ -1173,7 +1171,7 @@ def _create_cache_key(operation: str, input_data: Union[SearchToolInput, ScanToo
     
     # Create deterministic JSON and hash it
     key_string = json.dumps(key_data, sort_keys=True)
-    return hashlib.md5(key_string.encode()).hexdigest()
+    return hashlib.md5(key_string.encode(), usedforsecurity=False).hexdigest()
 
 
 async def ast_grep_search_streaming(input_data: SearchToolInput, ast_grep_path: Path) -> AsyncIterator[List[TextContent]]:

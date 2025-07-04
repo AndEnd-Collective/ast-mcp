@@ -1959,7 +1959,7 @@ class PathParameterHandler:
         """
         options_str = json.dumps(options or {}, sort_keys=True)
         content = f"{path}:{options_str}"
-        return hashlib.md5(content.encode()).hexdigest()
+        return hashlib.md5(content.encode(), usedforsecurity=False).hexdigest()
     
     def should_cache_result(self, path: str, result_size: int) -> bool:
         """Determine if result should be cached.

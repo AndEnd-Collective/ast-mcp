@@ -669,7 +669,7 @@ class ValidationConfig(BaseModel):
     )
     blocked_paths: Set[str] = Field(
         default_factory=lambda: {
-            '/etc', '/proc', '/sys', '/dev', '/root', '/tmp',
+            '/etc', '/proc', '/sys', '/dev', '/root', '/tmp',  # nosec B108 - this is a list of blocked paths, not usage
             'C:\\Windows', 'C:\\System32', 'C:\\Users\\Administrator'
         },
         description="Blocked system paths"

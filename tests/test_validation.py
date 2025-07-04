@@ -173,8 +173,8 @@ rules:
         # Test valid input
         try:
             valid_input = ScanToolInput(
-                rule_path=rule_file,
-                paths=["./src"],
+                path="./src",  # Required field
+                rules_config=rule_file,  # Correct field name
                 output_format="json"
             )
             print("✅ Valid ScanToolInput passes")
@@ -185,8 +185,8 @@ rules:
         # Test non-existent rule file
         try:
             ScanToolInput(
-                rule_path="/nonexistent/rule.yml",
-                paths=["./src"]
+                path="./src",
+                rules_config="/nonexistent/rule.yml"
             )
             print("❌ Should have failed - non-existent rule file")
             return False
