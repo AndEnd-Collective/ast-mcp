@@ -54,11 +54,14 @@ def check_dependencies():
                 # Special check for ast-grep binary
                 import importlib.util
                 spec = importlib.util.find_spec("ast_grep_cli")
-                if not spec:
+                if spec:
+                    print(f"✅ {description}")
+                else:
+                    print(f"❌ {description} - MISSING")
                     missing.append((module, description))
             else:
                 __import__(module.replace("-", "_"))
-            print(f"✅ {description}")
+                print(f"✅ {description}")
         except ImportError:
             print(f"❌ {description} - MISSING")
             missing.append((module, description))
