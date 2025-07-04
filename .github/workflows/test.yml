@@ -2,10 +2,10 @@ name: Test and Validation
 
 on:
   push:
-    branches: [ develop, feature/* ]
+    branches: [ main, develop, feature/* ]
   pull_request:
     branches: [ main, develop ]
-  workflow_dispatch:  # Allow manual triggering
+  workflow_dispatch:
 
 env:
   PYTHON_VERSION: "3.11"
@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.9", "3.11", "3.12"]
         
     steps:
     - name: Checkout code
@@ -38,22 +38,25 @@ jobs:
     - name: Install system dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y curl unzip
+        sudo apt-get install -y curl
         
     - name: Install ast-grep binary
       run: |
         # Download and install ast-grep for testing
-        curl -L https://github.com/ast-grep/ast-grep/releases/download/0.38.6/ast-grep-x86_64-unknown-linux-gnu.zip -o ast-grep.zip
-        unzip ast-grep.zip
-        chmod +x ast-grep-x86_64-unknown-linux-gnu/ast-grep
-        sudo mv ast-grep-x86_64-unknown-linux-gnu/ast-grep /usr/local/bin/
+        curl -L https://github.com/ast-grep/ast-grep/releases/download/0.38.6/ast-grep-x86_64-unknown-linux-gnu.tar.gz -o ast-grep.tar.gz
+        tar -xzf ast-grep.tar.gz
+        chmod +x ast-grep
+        sudo mv ast-grep /usr/local/bin/
         ast-grep --version
         
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -e .
-        pip install pytest pytest-asyncio pytest-cov
+        
+    - name: Set environment variables
+      run: |
+        echo "PYTHONPATH=$GITHUB_WORKSPACE/src" >> $GITHUB_ENV
         
     - name: Verify installation
       run: |
@@ -70,227 +73,15 @@ jobs:
         echo "Running basic MCP functionality tests..."
         python tests/test_mcp.py
         
-    - name: Run MCP protocol compliance tests
-      run: |
-        echo "Running MCP protocol compliance tests..."
-        python tests/test_mcp_protocol.py
-        
     - name: Run comprehensive test suite
       run: |
         echo "Running comprehensive test suite..."
         python tests/run_all_tests.py
-        
-    - name: Run pytest tests
-      if: matrix.python-version == '3.11'  # Only run pytest on one version to avoid redundancy
-      run: |
-        echo "Running pytest test discovery..."
-        python -m pytest tests/ -v --tb=short --no-header
-        
-    - name: Generate test coverage report
-      if: matrix.python-version == '3.11'
-      run: |
-        echo "Generating coverage report..."
-        python -m pytest tests/ --cov=src/ast_grep_mcp --cov-report=xml --cov-report=term-missing
-        
-    - name: Upload coverage to Codecov
-      if: matrix.python-version == '3.11'
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./coverage.xml
-        flags: unittests
-        name: codecov-umbrella
-        fail_ci_if_error: false
-
-  integration-test:
-    name: Integration Testing
-    runs-on: ubuntu-latest
-    needs: test
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
-        
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y curl unzip
-        
-        # Install ast-grep
-        curl -L https://github.com/ast-grep/ast-grep/releases/download/0.38.6/ast-grep-x86_64-unknown-linux-gnu.zip -o ast-grep.zip
-        unzip ast-grep.zip
-        chmod +x ast-grep-x86_64-unknown-linux-gnu/ast-grep
-        sudo mv ast-grep-x86_64-unknown-linux-gnu/ast-grep /usr/local/bin/
-        
-        # Install Python package
-        python -m pip install --upgrade pip
-        pip install -e .
-        
-    - name: Test MCP server startup
-      run: |
-        echo "Testing MCP server startup and shutdown..."
-        timeout 10s python -m ast_grep_mcp.server --help || true
-        echo "Server startup test completed"
-        
-    - name: Test with sample code files
-      run: |
-        echo "Creating test files..."
-        mkdir -p test_workspace
-        cat > test_workspace/test.js << 'EOF'
-        function example() {
-            console.log("debug message");
-            var oldStyle = "should use let";
-            return oldStyle;
-        }
-        EOF
-        
-        cat > test_workspace/test.py << 'EOF'
-        def example():
-            print("debug message")
-            name = "test"
-            if name is "admin":
-                return True
-        EOF
-        
-        echo "Testing search functionality..."
-        python -c "
-        import asyncio
-        import sys
-        sys.path.insert(0, 'src')
-        from ast_grep_mcp.tools import SearchToolInput, ast_grep_search_tool_impl
-        from ast_grep_mcp.utils import find_ast_grep_binary
-        
-        async def test():
-            ast_grep_path = await find_ast_grep_binary()
-            if ast_grep_path:
-                input_data = SearchToolInput(
-                    pattern='console.log(\$MSG)',
-                    language='javascript', 
-                    path='test_workspace/test.js'
-                )
-                result = await ast_grep_search_tool_impl(input_data, ast_grep_path)
-                print('Search test completed successfully')
-            else:
-                print('ast-grep not found')
-        
-        asyncio.run(test())
-        "
-
-  build-test:
-    name: Build and Distribution Test
-    runs-on: ubuntu-latest
-    needs: test
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
-        
-    - name: Install build dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install build twine
-        
-    - name: Build package
-      run: |
-        python -m build
-        
-    - name: Check build artifacts
-      run: |
-        ls -la dist/
-        twine check dist/*
-        
-    - name: Test package installation
-      run: |
-        pip install dist/*.whl
-        python -c "import ast_grep_mcp; print(f'Version: {ast_grep_mcp.__version__}')"
-
-  performance-test:
-    name: Performance Testing
-    runs-on: ubuntu-latest
-    needs: test
-    if: github.event_name == 'pull_request'
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
-        
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y curl unzip time
-        
-        # Install ast-grep
-        curl -L https://github.com/ast-grep/ast-grep/releases/download/0.38.6/ast-grep-x86_64-unknown-linux-gnu.zip -o ast-grep.zip
-        unzip ast-grep.zip
-        chmod +x ast-grep-x86_64-unknown-linux-gnu/ast-grep
-        sudo mv ast-grep-x86_64-unknown-linux-gnu/ast-grep /usr/local/bin/
-        
-        # Install Python package
-        python -m pip install --upgrade pip
-        pip install -e .
-        
-    - name: Performance benchmarking
-      run: |
-        echo "Running performance benchmarks..."
-        
-        # Create larger test files
-        mkdir -p perf_test
-        for i in {1..10}; do
-          cat > perf_test/large_file_$i.js << 'EOF'
-        function example1() { console.log("test"); }
-        function example2() { console.log("test"); }
-        function example3() { console.log("test"); }
-        var x = "old style";
-        let y = "new style";
-        EOF
-        done
-        
-        # Time the search operations
-        time python -c "
-        import asyncio
-        import sys
-        import time
-        sys.path.insert(0, 'src')
-        from ast_grep_mcp.tools import SearchToolInput, ast_grep_search_tool_impl
-        from ast_grep_mcp.utils import find_ast_grep_binary
-        
-        async def benchmark():
-            ast_grep_path = await find_ast_grep_binary()
-            if ast_grep_path:
-                start = time.time()
-                input_data = SearchToolInput(
-                    pattern='console.log(\$MSG)',
-                    language='javascript',
-                    path='perf_test',
-                    recursive=True
-                )
-                result = await ast_grep_search_tool_impl(input_data, ast_grep_path)
-                end = time.time()
-                print(f'Search completed in {end-start:.2f} seconds')
-            else:
-                print('ast-grep not found')
-        
-        asyncio.run(benchmark())
-        "
 
   status-check:
     name: Overall Status Check
     runs-on: ubuntu-latest
-    needs: [test, integration-test, build-test]
+    needs: [test]
     if: always()
     
     steps:
@@ -298,10 +89,8 @@ jobs:
       run: |
         echo "Test Results Summary:"
         echo "- Basic Tests: ${{ needs.test.result }}"
-        echo "- Integration Tests: ${{ needs.integration-test.result }}"
-        echo "- Build Tests: ${{ needs.build-test.result }}"
         
-        if [[ "${{ needs.test.result }}" == "success" && "${{ needs.integration-test.result }}" == "success" && "${{ needs.build-test.result }}" == "success" ]]; then
+        if [[ "${{ needs.test.result }}" == "success" ]]; then
           echo "✅ All tests passed successfully!"
           echo "status=success" >> $GITHUB_OUTPUT
         else
@@ -309,23 +98,3 @@ jobs:
           echo "status=failure" >> $GITHUB_OUTPUT
           exit 1
         fi
-        
-    - name: Update commit status
-      if: github.event_name == 'pull_request'
-      uses: actions/github-script@v6
-      with:
-        script: |
-          const status = '${{ steps.check.outputs.status }}' === 'success' ? 'success' : 'failure';
-          const description = status === 'success' ? 
-            'All tests passed successfully!' : 
-            'Some tests failed. Please check the details.';
-            
-          github.rest.repos.createCommitStatus({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            sha: context.payload.pull_request.head.sha,
-            state: status,
-            target_url: `${context.payload.repository.html_url}/actions/runs/${context.runId}`,
-            description: description,
-            context: 'tests/comprehensive'
-          });

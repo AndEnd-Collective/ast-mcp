@@ -56,10 +56,10 @@ jobs:
         
     - name: Install ast-grep binary
       run: |
-        curl -L https://github.com/ast-grep/ast-grep/releases/download/0.38.6/ast-grep-x86_64-unknown-linux-gnu.zip -o ast-grep.zip
-        unzip ast-grep.zip
-        chmod +x ast-grep-x86_64-unknown-linux-gnu/ast-grep
-        sudo mv ast-grep-x86_64-unknown-linux-gnu/ast-grep /usr/local/bin/
+        curl -L https://github.com/ast-grep/ast-grep/releases/download/0.38.6/ast-grep-x86_64-unknown-linux-gnu.tar.gz -o ast-grep.tar.gz
+        tar -xzf ast-grep.tar.gz
+        chmod +x ast-grep
+        sudo mv ast-grep /usr/local/bin/
         ast-grep --version
         
     - name: Install Python dependencies
