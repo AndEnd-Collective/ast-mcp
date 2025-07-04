@@ -2,21 +2,6 @@
 
 A powerful [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server that provides AI assistants with semantic code search and analysis capabilities using [ast-grep](https://ast-grep.github.io/).
 
-## 🙏 Acknowledgments
-
-This project is built upon the incredible work of the [ast-grep](https://ast-grep.github.io/) project by [Herrington Darkholme](https://github.com/HerringtonDarkholme). ast-grep is a revolutionary tool that makes abstract syntax tree (AST) manipulation accessible and powerful for developers worldwide.
-
-**Special thanks to the ast-grep team for:**
-- Creating an intuitive, jQuery-like API for AST traversal
-- Supporting 20+ programming languages with consistent syntax
-- Providing excellent documentation and community support
-- Building a fast, reliable Rust-based foundation
-- Making semantic code search accessible to everyone
-
-🔗 **Learn more about ast-grep**: [https://ast-grep.github.io/](https://ast-grep.github.io/)  
-⭐ **Star the ast-grep project**: [https://github.com/ast-grep/ast-grep](https://github.com/ast-grep/ast-grep)
-
-This MCP server simply provides a bridge between AI assistants and the amazing capabilities that ast-grep already offers.
 
 ## 🚀 Features
 
@@ -408,6 +393,25 @@ AST_GREP_LOGGING__LOG_LEVEL=DEBUG python -m ast_grep_mcp.server
 ```
 
 For comprehensive troubleshooting, see the [Troubleshooting Guide](docs/TROUBLESHOOTING.md).
+
+---
+
+## 🙏 Acknowledgments
+
+This project is built upon the incredible work of the [ast-grep](https://ast-grep.github.io/) project by [Herrington Darkholme](https://github.com/HerringtonDarkholme). ast-grep is a revolutionary tool that makes abstract syntax tree (AST) manipulation accessible and powerful for developers worldwide.
+
+**Special thanks to the ast-grep team for:**
+- Creating an intuitive, jQuery-like API for AST traversal
+- Supporting 20+ programming languages with consistent syntax
+- Providing excellent documentation and community support
+- Building a fast, reliable Rust-based foundation
+- Making semantic code search accessible to everyone
+
+🔗 **Learn more about ast-grep**: [https://ast-grep.github.io/](https://ast-grep.github.io/)  
+⭐ **Star the ast-grep project**: [https://github.com/ast-grep/ast-grep](https://github.com/ast-grep/ast-grep)
+
+This MCP server simply provides a bridge between AI assistants and the amazing capabilities that ast-grep already offers.
+
 
 ---
 
