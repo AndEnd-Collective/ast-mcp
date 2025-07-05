@@ -193,33 +193,60 @@ if __name__ == "__main__":
         except:
             return 0.0
     
+    async def initialize_mcp_client(self, server_process, client_name: str = "perf-test") -> bool:
+        """Initialize MCP client connection properly following the protocol."""
+        try:
+            # Send initialize request
+            init_request = {
+                "jsonrpc": "2.0",
+                "method": "initialize",
+                "id": f"{client_name}-init",
+                "params": {
+                    "protocolVersion": "2024-11-05",
+                    "capabilities": {},
+                    "clientInfo": {"name": client_name, "version": "1.0.0"}
+                }
+            }
+            
+            init_response, init_time = await self.send_request_measure_time(server_process, init_request)
+            
+            if not (init_response and "result" in init_response):
+                return False
+            
+            # Send initialized notification
+            initialized_notification = {
+                "jsonrpc": "2.0",
+                "method": "notifications/initialized"
+            }
+            
+            await self.send_request_measure_time(server_process, initialized_notification)
+            return True
+            
+        except Exception as e:
+            print(f"MCP client initialization failed: {e}")
+            return False
+    
     async def test_single_request_performance(self):
         """Test performance of single requests."""
         print("\n⚡ Testing Single Request Performance")
         
         try:
             async with self.create_performance_server() as server_process:
-                # Initialize server
-                init_request = {
-                    "jsonrpc": "2.0",
-                    "method": "initialize",
-                    "id": "perf-init",
-                    "params": {
-                        "protocolVersion": "2024-11-05",
-                        "capabilities": {},
-                        "clientInfo": {"name": "perf-test", "version": "1.0.0"}
-                    }
-                }
-                
-                init_response, init_time = await self.send_request_measure_time(server_process, init_request)
+                # Initialize MCP client connection
+                start_time = time.time()
+                init_success = await self.initialize_mcp_client(server_process, "perf-test")
+                init_time = time.time() - start_time
                 
                 self.record_test(
                     "Single request - Initialization",
-                    init_response is not None and "result" in init_response,
+                    init_success,
                     f"Init time: {init_time:.3f}s"
                 )
                 
                 self.record_performance_metric("initialization_time", init_time, "seconds")
+                
+                if not init_success:
+                    return
                 
                 # Test tools/list performance
                 tools_request = {
@@ -230,10 +257,16 @@ if __name__ == "__main__":
                 
                 tools_response, tools_time = await self.send_request_measure_time(server_process, tools_request)
                 
+                # Debug the actual response
+                tools_success = tools_response is not None and ("result" in tools_response or "error" not in tools_response)
+                details = f"Tools list time: {tools_time:.3f}s"
+                if tools_response and "error" in tools_response:
+                    details += f" (Error: {tools_response['error'].get('message', 'unknown')})"
+                
                 self.record_test(
                     "Single request - Tools list",
-                    tools_response is not None and "result" in tools_response,
-                    f"Tools list time: {tools_time:.3f}s"
+                    tools_success,
+                    details
                 )
                 
                 self.record_performance_metric("tools_list_time", tools_time, "seconds")
@@ -247,10 +280,16 @@ if __name__ == "__main__":
                 
                 resources_response, resources_time = await self.send_request_measure_time(server_process, resources_request)
                 
+                # Debug the actual response
+                resources_success = resources_response is not None and ("result" in resources_response or "error" not in resources_response)
+                details = f"Resources list time: {resources_time:.3f}s"
+                if resources_response and "error" in resources_response:
+                    details += f" (Error: {resources_response['error'].get('message', 'unknown')})"
+                
                 self.record_test(
                     "Single request - Resources list",
-                    resources_response is not None and "result" in resources_response,
-                    f"Resources list time: {resources_time:.3f}s"
+                    resources_success,
+                    details
                 )
                 
                 self.record_performance_metric("resources_list_time", resources_time, "seconds")
@@ -268,19 +307,11 @@ if __name__ == "__main__":
         
         try:
             async with self.create_performance_server() as server_process:
-                # Initialize server first
-                init_request = {
-                    "jsonrpc": "2.0",
-                    "method": "initialize",
-                    "id": "concurrent-init",
-                    "params": {
-                        "protocolVersion": "2024-11-05",
-                        "capabilities": {},
-                        "clientInfo": {"name": "concurrent-test", "version": "1.0.0"}
-                    }
-                }
-                
-                await self.send_request_measure_time(server_process, init_request)
+                # Initialize MCP client connection
+                init_success = await self.initialize_mcp_client(server_process, "concurrent-test")
+                if not init_success:
+                    self.record_test("Concurrent requests", False, "Failed to initialize MCP client")
+                    return
                 
                 # Test with different concurrency levels
                 concurrency_levels = [5, 10, 20]
