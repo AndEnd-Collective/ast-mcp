@@ -61,7 +61,7 @@ test = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/AndEnd-Org/ast-mcp"
+"Homepage" = "https://andend.io"
 "Bug Tracker" = "https://github.com/AndEnd-Org/ast-mcp/issues"
 "Repository" = "https://github.com/AndEnd-Org/ast-mcp"
 "Documentation" = "https://github.com/AndEnd-Org/ast-mcp#readme"
