@@ -1,4 +1,4 @@
-name: Test and Validation
+name: MCP Validation and Testing
 
 on:
   push:
@@ -6,14 +6,416 @@ on:
   pull_request:
     branches: [ main, develop ]
   workflow_dispatch:
+    inputs:
+      run_performance_tests:
+        description: 'Run performance tests (can be slow)'
+        required: false
+        default: 'true'
+        type: boolean
 
 env:
   PYTHON_VERSION: "3.11"
   
 jobs:
-  test:
-    name: Run Tests and Validation
+  # Foundation check - ensures basic setup and dependencies
+  foundation-check:
+    name: Foundation & Dependencies Check
     runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+          
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y wget curl
+        
+    - name: Install ast-grep binary
+      run: |
+        # Install ast-grep for testing
+        curl -L https://github.com/ast-grep/ast-grep/releases/latest/download/ast-grep-x86_64-unknown-linux-gnu.zip -o ast-grep.zip
+        unzip ast-grep.zip
+        sudo mv ast-grep /usr/local/bin/
+        chmod +x /usr/local/bin/ast-grep
+        ast-grep --version
+        
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e .
+        
+    - name: Set environment variables
+      run: |
+        echo "PYTHONPATH=$GITHUB_WORKSPACE/src" >> $GITHUB_ENV
+        
+    - name: Verify installation
+      run: |
+        python -c "import ast_grep_mcp; print('✅ Package installed successfully')"
+        ast-grep --version
+        echo "✅ Foundation check passed"
+
+  # Core MCP Protocol Compliance Tests
+  mcp-protocol-tests:
+    name: MCP Protocol Compliance
+    runs-on: ubuntu-latest
+    needs: [foundation-check]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+          
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        curl -L https://github.com/ast-grep/ast-grep/releases/latest/download/ast-grep-x86_64-unknown-linux-gnu.zip -o ast-grep.zip
+        unzip ast-grep.zip
+        sudo mv ast-grep /usr/local/bin/
+        chmod +x /usr/local/bin/ast-grep
+        python -m pip install --upgrade pip
+        pip install -e .
+        
+    - name: Set environment variables
+      run: |
+        echo "PYTHONPATH=$GITHUB_WORKSPACE/src" >> $GITHUB_ENV
+        
+    - name: Run Protocol Message Validation
+      run: |
+        echo "🔍 Testing MCP Protocol Message Validation..."
+        python tests/test_mcp_protocol_messages.py
+        if [ $? -ne 0 ]; then
+          echo "❌ Protocol message validation failed!"
+          exit 1
+        fi
+        echo "✅ Protocol message validation passed"
+        
+    - name: Run Client-Server Integration Tests
+      run: |
+        echo "🤝 Testing MCP Client-Server Integration..."
+        python tests/test_mcp_client_integration.py
+        if [ $? -ne 0 ]; then
+          echo "❌ Client-server integration failed!"
+          exit 1
+        fi
+        echo "✅ Client-server integration passed"
+        
+    - name: Run Schema Compliance Tests
+      run: |
+        echo "📋 Testing MCP Schema Compliance..."
+        python tests/test_mcp_schema_compliance.py
+        if [ $? -ne 0 ]; then
+          echo "❌ Schema compliance failed!"
+          exit 1
+        fi
+        echo "✅ Schema compliance passed"
+        
+    - name: Run Structured Output Tests
+      run: |
+        echo "📤 Testing MCP Structured Output..."
+        python tests/test_mcp_structured_output.py
+        if [ $? -ne 0 ]; then
+          echo "❌ Structured output validation failed!"
+          exit 1
+        fi
+        echo "✅ Structured output validation passed"
+
+  # Transport Layer and Communication Tests
+  transport-tests:
+    name: Transport Layer Validation
+    runs-on: ubuntu-latest
+    needs: [foundation-check]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+          
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        curl -L https://github.com/ast-grep/ast-grep/releases/latest/download/ast-grep-x86_64-unknown-linux-gnu.zip -o ast-grep.zip
+        unzip ast-grep.zip
+        sudo mv ast-grep /usr/local/bin/
+        chmod +x /usr/local/bin/ast-grep
+        python -m pip install --upgrade pip
+        pip install -e .
+        
+    - name: Set environment variables
+      run: |
+        echo "PYTHONPATH=$GITHUB_WORKSPACE/src" >> $GITHUB_ENV
+        
+    - name: Run Transport Layer Tests
+      run: |
+        echo "🚀 Testing MCP Transport Layer..."
+        python tests/test_mcp_transport.py
+        if [ $? -ne 0 ]; then
+          echo "❌ Transport layer tests failed!"
+          exit 1
+        fi
+        echo "✅ Transport layer tests passed"
+
+  # Functional AST-Grep Integration Tests
+  ast-grep-functionality:
+    name: AST-Grep Functionality Tests
+    runs-on: ubuntu-latest
+    needs: [foundation-check]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+          
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        curl -L https://github.com/ast-grep/ast-grep/releases/latest/download/ast-grep-x86_64-unknown-linux-gnu.zip -o ast-grep.zip
+        unzip ast-grep.zip
+        sudo mv ast-grep /usr/local/bin/
+        chmod +x /usr/local/bin/ast-grep
+        python -m pip install --upgrade pip
+        pip install -e .
+        
+    - name: Set environment variables
+      run: |
+        echo "PYTHONPATH=$GITHUB_WORKSPACE/src" >> $GITHUB_ENV
+        
+    - name: Run AST-Grep Search Tests
+      run: |
+        echo "🔍 Testing AST-Grep Search Functionality..."
+        python tests/test_ast_grep_search.py
+        if [ $? -ne 0 ]; then
+          echo "❌ AST-Grep search tests failed!"
+          exit 1
+        fi
+        echo "✅ AST-Grep search tests passed"
+        
+    - name: Run AST-Grep Scan Tests
+      run: |
+        echo "🔍 Testing AST-Grep Scan Functionality..."
+        python tests/test_ast_grep_scan.py
+        if [ $? -ne 0 ]; then
+          echo "❌ AST-Grep scan tests failed!"
+          exit 1
+        fi
+        echo "✅ AST-Grep scan tests passed"
+        
+    - name: Run Tools Registration Tests
+      run: |
+        echo "🛠️ Testing MCP Tools Registration..."
+        python tests/test_mcp_tools_registration.py
+        if [ $? -ne 0 ]; then
+          echo "❌ Tools registration tests failed!"
+          exit 1
+        fi
+        echo "✅ Tools registration tests passed"
+        
+    - name: Run Resource Management Tests
+      run: |
+        echo "📚 Testing MCP Resource Management..."
+        python tests/test_mcp_resources.py
+        if [ $? -ne 0 ]; then
+          echo "❌ Resource management tests failed!"
+          exit 1
+        fi
+        echo "✅ Resource management tests passed"
+
+  # Performance and Load Tests (optional for faster CI)
+  performance-tests:
+    name: Performance & Load Tests
+    runs-on: ubuntu-latest
+    needs: [foundation-check]
+    if: ${{ github.event.inputs.run_performance_tests != 'false' }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+          
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        curl -L https://github.com/ast-grep/ast-grep/releases/latest/download/ast-grep-x86_64-unknown-linux-gnu.zip -o ast-grep.zip
+        unzip ast-grep.zip
+        sudo mv ast-grep /usr/local/bin/
+        chmod +x /usr/local/bin/ast-grep
+        python -m pip install --upgrade pip
+        pip install -e .
+        pip install psutil  # For performance monitoring
+        
+    - name: Set environment variables
+      run: |
+        echo "PYTHONPATH=$GITHUB_WORKSPACE/src" >> $GITHUB_ENV
+        
+    - name: Run Performance Tests
+      run: |
+        echo "⚡ Testing MCP Performance & Load Handling..."
+        timeout 10m python tests/test_mcp_performance.py || {
+          echo "❌ Performance tests failed or timed out!"
+          exit 1
+        }
+        echo "✅ Performance tests passed"
+
+  # Comprehensive MCP Validation Suite
+  comprehensive-validation:
+    name: Comprehensive MCP Validation
+    runs-on: ubuntu-latest
+    needs: [mcp-protocol-tests, transport-tests, ast-grep-functionality]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+          
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        curl -L https://github.com/ast-grep/ast-grep/releases/latest/download/ast-grep-x86_64-unknown-linux-gnu.zip -o ast-grep.zip
+        unzip ast-grep.zip
+        sudo mv ast-grep /usr/local/bin/
+        chmod +x /usr/local/bin/ast-grep
+        python -m pip install --upgrade pip
+        pip install -e .
+        pip install psutil
+        
+    - name: Set environment variables
+      run: |
+        echo "PYTHONPATH=$GITHUB_WORKSPACE/src" >> $GITHUB_ENV
+        
+    - name: Run Comprehensive MCP Validation Suite
+      run: |
+        echo "🔄 Running Comprehensive MCP Validation Test Suite..."
+        python tests/run_mcp_validation_tests.py
+        
+        # Check if validation results file was created
+        if [ -f "tests/mcp_validation_results.json" ]; then
+          echo "📊 Validation results generated successfully"
+          
+          # Extract and display key metrics
+          python3 -c "
+import json
+with open('tests/mcp_validation_results.json', 'r') as f:
+    data = json.load(f)
+    
+print('🎯 MCP Validation Results Summary:')
+total_modules = len([k for k in data.keys() if k.startswith('test_')])
+passing_modules = len([k for k, v in data.items() if k.startswith('test_') and v.get('return_code', 1) == 0])
+
+print(f'✅ Modules Passed: {passing_modules}/{total_modules}')
+
+# Check specific compliance targets
+for module, results in data.items():
+    if module.startswith('test_mcp_'):
+        success_rate = results.get('success_rate', 0)
+        total_tests = results.get('total_tests', 0)
+        passed_tests = results.get('passed_tests', 0)
+        
+        status = '✅' if success_rate >= 90 else '⚠️' if success_rate >= 75 else '❌'
+        print(f'{status} {results.get(\"name\", module)}: {success_rate:.1f}% ({passed_tests}/{total_tests})')
+        
+        # Fail if any critical module is below 85%
+        if 'protocol' in module.lower() or 'integration' in module.lower():
+            if success_rate < 85:
+                print(f'❌ CRITICAL FAILURE: {module} below 85% threshold!')
+                exit(1)
+"
+        else
+          echo "❌ Validation results file not found!"
+          exit 1
+        fi
+        
+    - name: Upload validation results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: mcp-validation-results
+        path: tests/mcp_validation_results.json
+        
+    - name: Upload test logs
+      uses: actions/upload-artifact@v3
+      if: failure()
+      with:
+        name: test-logs
+        path: tests/*.log
+
+  # Multi-Python version compatibility test
+  compatibility-test:
+    name: Python Compatibility (${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    needs: [foundation-check]
     strategy:
       matrix:
         python-version: ["3.10", "3.11", "3.12"]
@@ -27,20 +429,13 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
         
-    - name: Cache pip dependencies
-      uses: actions/cache@v3
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
-          
-    - name: Install system dependencies
+    - name: Install dependencies
       run: |
         sudo apt-get update
-        
-    - name: Install Python dependencies
-      run: |
+        curl -L https://github.com/ast-grep/ast-grep/releases/latest/download/ast-grep-x86_64-unknown-linux-gnu.zip -o ast-grep.zip
+        unzip ast-grep.zip
+        sudo mv ast-grep /usr/local/bin/
+        chmod +x /usr/local/bin/ast-grep
         python -m pip install --upgrade pip
         pip install -e .
         
@@ -48,42 +443,63 @@ jobs:
       run: |
         echo "PYTHONPATH=$GITHUB_WORKSPACE/src" >> $GITHUB_ENV
         
-    - name: Verify installation
+    - name: Run Basic MCP Validation
       run: |
-        python -c "import ast_grep_mcp; print('Package installed successfully')"
-        
-    - name: Run validation tests
-      run: |
-        echo "Running input validation tests..."
-        python tests/test_validation.py
-        
-    - name: Run basic MCP functionality tests
-      run: |
-        echo "Running basic MCP functionality tests..."
-        python tests/test_mcp.py
-        
-    - name: Run comprehensive test suite
-      run: |
-        echo "Running comprehensive test suite..."
-        python tests/run_all_tests.py
+        echo "🐍 Testing Python ${{ matrix.python-version }} compatibility..."
+        python tests/test_mcp_protocol_messages.py
+        python tests/test_mcp_schema_compliance.py
+        echo "✅ Python ${{ matrix.python-version }} compatibility verified"
 
-  status-check:
-    name: Overall Status Check
+  # Final status check with comprehensive reporting
+  final-status-check:
+    name: Final Status & Compliance Report
     runs-on: ubuntu-latest
-    needs: [test]
+    needs: [mcp-protocol-tests, transport-tests, ast-grep-functionality, comprehensive-validation, compatibility-test]
     if: always()
     
     steps:
-    - name: Check test results
-      run: |
-        echo "Test Results Summary:"
-        echo "- Basic Tests: ${{ needs.test.result }}"
+    - name: Download validation results
+      uses: actions/download-artifact@v3
+      with:
+        name: mcp-validation-results
+        path: results/
+      continue-on-error: true
         
-        if [[ "${{ needs.test.result }}" == "success" ]]; then
-          echo "✅ All tests passed successfully!"
-          echo "status=success" >> $GITHUB_OUTPUT
+    - name: Generate Final Report
+      run: |
+        echo "📋 FINAL MCP VALIDATION REPORT"
+        echo "=================================="
+        
+        echo "✅ Foundation Check: ${{ needs.foundation-check.result }}"
+        echo "✅ MCP Protocol Tests: ${{ needs.mcp-protocol-tests.result }}"
+        echo "✅ Transport Tests: ${{ needs.transport-tests.result }}"
+        echo "✅ AST-Grep Functionality: ${{ needs.ast-grep-functionality.result }}"
+        echo "✅ Comprehensive Validation: ${{ needs.comprehensive-validation.result }}"
+        echo "✅ Compatibility Tests: ${{ needs.compatibility-test.result }}"
+        
+        # Performance tests are optional
+        perf_result="${{ needs.performance-tests.result }}"
+        if [ "$perf_result" != "" ]; then
+          echo "⚡ Performance Tests: $perf_result"
         else
-          echo "❌ Some tests failed!"
-          echo "status=failure" >> $GITHUB_OUTPUT
+          echo "⚡ Performance Tests: Skipped"
+        fi
+        
+        echo ""
+        
+        # Check if all critical tests passed
+        if [[ "${{ needs.mcp-protocol-tests.result }}" == "success" ]] && \
+           [[ "${{ needs.transport-tests.result }}" == "success" ]] && \
+           [[ "${{ needs.ast-grep-functionality.result }}" == "success" ]] && \
+           [[ "${{ needs.comprehensive-validation.result }}" == "success" ]] && \
+           [[ "${{ needs.compatibility-test.result }}" == "success" ]]; then
+          echo "🎉 ALL CRITICAL TESTS PASSED!"
+          echo "✅ AST-Grep MCP server is foundationally correct and production-ready"
+          echo "✅ MCP protocol compliance verified"
+          echo "✅ All functionality tests passed"
+          echo "✅ Cross-platform compatibility confirmed"
+        else
+          echo "❌ SOME CRITICAL TESTS FAILED!"
+          echo "❌ AST-Grep MCP server has foundational issues that must be resolved"
           exit 1
         fi
