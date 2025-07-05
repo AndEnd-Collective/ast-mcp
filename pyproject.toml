@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "ast-grep-mcp"
+name = "ast-mcp"
 version = "1.0.0"
 description = "Production-ready MCP Server for AST-Grep with 25+ code quality rules across 5 languages"
 readme = "README.md"
@@ -61,13 +61,13 @@ test = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/AndEnd-Org/ast-mcp"
+"Homepage" = "https://andend.io"
 "Bug Tracker" = "https://github.com/AndEnd-Org/ast-mcp/issues"
 "Repository" = "https://github.com/AndEnd-Org/ast-mcp"
 "Documentation" = "https://github.com/AndEnd-Org/ast-mcp#readme"
 
 [project.scripts]
-ast-grep-mcp = "ast_grep_mcp.server:main_sync"
+ast-mcp = "ast_grep_mcp.server:main_sync"
 
 [tool.setuptools.packages.find]
 where = ["src"]

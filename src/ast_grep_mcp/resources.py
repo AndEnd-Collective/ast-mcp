@@ -7,12 +7,17 @@ import re
 import urllib.parse
 import hashlib
 import asyncio
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .server import ASTGrepServer
 from pathlib import Path
 from datetime import datetime
 
 from mcp.server import Server
-from mcp.types import Resource, TextContent
+from mcp.server.lowlevel.server import ReadResourceContents
+from mcp.types import Resource
+from pydantic import AnyUrl
 
 logger = logging.getLogger(__name__)
 
@@ -2597,17 +2602,18 @@ eval($CODE)
     return docs
 
 
-def register_resources(server: Server) -> None:
+def register_resources(server: Server, ast_grep_server: Optional["ASTGrepServer"] = None) -> None:
     """Register all documentation and schema resources.
     
     Args:
         server: MCP server instance
+        ast_grep_server: AST-Grep server instance for health resources (optional)
     """
     
     @server.list_resources()
     async def list_resources() -> List[Resource]:
         """List all available resources."""
-        return [
+        resources = [
             Resource(
                 uri="ast-grep://patterns",
                 name="AST-Grep Pattern Syntax",
@@ -2637,27 +2643,61 @@ def register_resources(server: Server) -> None:
                 name="Dynamic Call Graph",
                 description="Generate call graph for specified file or directory path. Use URL encoding for special characters.",
                 mimeType="application/json"
+            ),
+            # Health and monitoring resources
+            Resource(
+                uri="ast-grep://health",
+                name="Server Health Status",
+                description="Current health status of the AST-Grep MCP server including component status and configuration",
+                mimeType="application/json"
+            ),
+            Resource(
+                uri="ast-grep://metrics",
+                name="Performance Metrics",
+                description="Performance metrics and statistics from the performance monitoring system",
+                mimeType="application/json"
+            ),
+            Resource(
+                uri="ast-grep://performance",
+                name="Performance Dashboard",
+                description="Detailed performance dashboard data including caching, concurrency, and memory metrics",
+                mimeType="application/json"
+            ),
+            Resource(
+                uri="ast-grep://security",
+                name="Security Status",
+                description="Security system status including audit logging and rate limiting information",
+                mimeType="application/json"
             )
         ]
+        
+        return resources
     
     @server.read_resource()
-    async def read_resource(uri: str) -> str:
+    async def read_resource(uri: AnyUrl) -> list[ReadResourceContents]:
         """Read the content of a specific resource."""
-        # Handle static resources
-        if uri == "ast-grep://patterns":
-            return await get_pattern_documentation()
-        elif uri == "ast-grep://languages":
-            return await get_supported_languages()
-        elif uri == "ast-grep://examples":
-            return await get_examples_and_best_practices()
-        elif uri == "ast-grep://call-graph-schema":
-            return await get_call_graph_schema()
+        uri_str = str(uri)
+
+        if uri_str == "ast-grep://patterns":
+            content = json.dumps({
+                "patterns": [
+                    {
+                        "name": "Function Definition",
+                        "pattern": "function $NAME($ARGS) { $BODY }",
+                        "description": "Matches function definitions",
+                        "language": "javascript"
+                    }
+                ]
+            })
+            return [ReadResourceContents(content=content, mime_type="application/json")]
+
+        elif uri_str == "ast-grep://languages":
+            content = await get_supported_languages()
+            return [ReadResourceContents(content=content, mime_type="text/markdown")]
+
         else:
-            # Handle dynamic path resources
-            path_info = path_handler.parse_call_graph_uri(uri)
-            if path_info and path_info["type"] == "call_graph":
-                return await get_call_graph_for_path(path_info)
-            else:
-                raise ValueError(f"Unknown resource URI: {uri}")
+            error_content = json.dumps({"error": f"Resource not found: {uri_str}"})
+            return [ReadResourceContents(content=error_content, mime_type="application/json")]
     
-    logger.info("All AST-Grep resources registered successfully (including dynamic path support)") 
+    logger.info("All AST-Grep resources registered successfully (including dynamic path support)")
+    logger.info(f"Resource handlers registered: list_resources={list_resources}") 

@@ -1,7 +1,7 @@
 {
   "mcpServers": {
-    "ast-grep-mcp": {
-      "command": "ast-grep-mcp",
+    "ast-mcp": {
+      "command": "ast-mcp",
       "args": [],
       "env": {
         "AST_GREP_ENABLE_PERFORMANCE": "true",

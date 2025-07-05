@@ -65,7 +65,7 @@ class ServerConfig:
     """Configuration for the AST-Grep MCP server."""
     
     def __init__(self):
-        self.name = os.getenv("AST_GREP_MCP_NAME", "ast-grep-mcp")
+        self.name = os.getenv("AST_GREP_MCP_NAME", "ast-mcp")
         self.version = os.getenv("AST_GREP_MCP_VERSION", "1.0.0")
         
         # Performance settings
@@ -1045,118 +1045,10 @@ class ASTGrepMCPServer:
         
         # Register tools and resources
         register_tools(self.server, self._ast_grep_path)
-        register_resources(self.server)
-        
-        # Register health check endpoints
-        await self._register_health_endpoints()
+        register_resources(self.server, self)
         
         logger.info("MCP components registered successfully")
     
-    async def _register_health_endpoints(self) -> None:
-        """Register health monitoring resources."""
-        
-        @self.server.read_resource()
-        async def read_health_resource(uri: str) -> str:
-            """Read health monitoring resources."""
-            if uri == "ast-grep://health":
-                return await self._get_health_status()
-            elif uri == "ast-grep://metrics":
-                return await self._get_metrics_status()
-            elif uri == "ast-grep://performance":
-                return await self._get_performance_status()
-            elif uri == "ast-grep://security":
-                return await self._get_security_status()
-            elif uri == "ast-grep://health/trends":
-                return await self._get_health_trends()
-            elif uri == "ast-grep://health/alerts":
-                return await self._get_alerts_status()
-            elif uri == "ast-grep://health/system":
-                return await self._get_system_resources_status()
-            elif uri == "ast-grep://health/dependencies":
-                return await self._get_dependencies_status()
-            elif uri == "ast-grep://health/diagnostics":
-                return await self._get_diagnostics_status()
-            else:
-                raise ValueError(f"Unknown health resource: {uri}")
-
-        @self.server.list_resources()
-        async def list_health_resources() -> List[Resource]:
-            """List available health monitoring resources."""
-            resources = [
-                Resource(
-                    uri="ast-grep://health",
-                    name="Server Health Status",
-                    description="Current health status of the AST-Grep MCP server including component status and configuration",
-                    mimeType="application/json"
-                ),
-                Resource(
-                    uri="ast-grep://metrics",
-                    name="Performance Metrics",
-                    description="Performance metrics and statistics from the performance monitoring system",
-                    mimeType="application/json"
-                ),
-                Resource(
-                    uri="ast-grep://performance",
-                    name="Performance Dashboard",
-                    description="Detailed performance dashboard data including caching, concurrency, and memory metrics",
-                    mimeType="application/json"
-                ),
-                Resource(
-                    uri="ast-grep://security",
-                    name="Security Status",
-                    description="Security system status including audit logging and rate limiting information",
-                    mimeType="application/json"
-                )
-            ]
-            
-            # Add enhanced monitoring resources if enabled
-            if self.config.enable_monitoring:
-                resources.extend([
-                    Resource(
-                        uri="ast-grep://health/trends",
-                        name="Health Trends",
-                        description="Historical health trends and metrics over different time windows",
-                        mimeType="application/json"
-                    ),
-                    Resource(
-                        uri="ast-grep://health/alerts",
-                        name="Health Alerts",
-                        description="Current health alerts and alert history with severity levels",
-                        mimeType="application/json"
-                    )
-                ])
-            
-            if self.config.system_monitoring_enabled:
-                resources.append(
-                    Resource(
-                        uri="ast-grep://health/system",
-                        name="System Resources",
-                        description="Detailed system resource monitoring including CPU, memory, disk, and network metrics",
-                        mimeType="application/json"
-                    )
-                )
-            
-            if self.config.dependency_check_enabled:
-                resources.append(
-                    Resource(
-                        uri="ast-grep://health/dependencies",
-                        name="Dependencies Status",
-                        description="Health status of external dependencies including AST-Grep binary and system tools",
-                        mimeType="application/json"
-                    )
-                )
-            
-            if self.config.detailed_diagnostics:
-                resources.append(
-                    Resource(
-                        uri="ast-grep://health/diagnostics",
-                        name="System Diagnostics",
-                        description="Comprehensive system diagnostics and configuration information",
-                        mimeType="application/json"
-                    )
-                )
-            
-            return resources
     
     async def _initialize_health_monitoring(self) -> None:
         """Initialize health monitoring background task."""
