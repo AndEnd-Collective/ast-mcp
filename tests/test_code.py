@@ -1,6 +1,25 @@
 #!/usr/bin/env python3
 """Test Python file with various issues that our rules should catch."""
 
+# Define variables for testing
+name = "test_user"
+user_valid = True
+
+def risky_operation():
+    """Mock risky operation for testing."""
+    pass
+
+def safe_operation():
+    """Mock safe operation for testing."""
+    return "success"
+
+# Mock logger for testing
+class Logger:
+    def error(self, msg):
+        pass
+
+logger = Logger()
+
 # This should trigger python-no-percent-formatting
 message = "Hello %s" % name
 
