@@ -194,8 +194,8 @@ class MCPSchemaComplianceValidator:
                 if not isinstance(prop_schema, dict):
                     return False
                 
-                # Each property should have a type
-                if "type" not in prop_schema:
+                # Each property should have a type or be a valid JSON schema construct
+                if "type" not in prop_schema and "anyOf" not in prop_schema and "$ref" not in prop_schema and "allOf" not in prop_schema:
                     return False
             
             return True

@@ -325,16 +325,19 @@ class MCPStructuredOutputValidator:
         """Test type hint patterns for MCP compliance."""
         print("\n🏷️ Testing Type Hint Patterns")
         
-        # Test function type hints from tools module
+        # Test function type hints from tools module - focus on MCP tool functions only
         try:
             from ast_grep_mcp import tools
             
-            # Get all callable attributes from tools module
-            tool_functions = []
-            for attr_name in dir(tools):
-                attr = getattr(tools, attr_name)
-                if callable(attr) and not attr_name.startswith('_'):
-                    tool_functions.append((attr_name, attr))
+            # Get only the actual MCP tool functions, not imported utilities
+            mcp_tool_functions = [
+                ('ast_grep_search', getattr(tools, 'ast_grep_search', None)),
+                ('ast_grep_scan', getattr(tools, 'ast_grep_scan', None)),
+                ('ast_grep_run', getattr(tools, 'ast_grep_run', None)),
+            ]
+            
+            # Filter out None values
+            tool_functions = [(name, func) for name, func in mcp_tool_functions if func is not None]
             
             for func_name, func in tool_functions:
                 try:
