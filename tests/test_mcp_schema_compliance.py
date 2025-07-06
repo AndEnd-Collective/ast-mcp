@@ -564,14 +564,44 @@ class MCPSchemaComplianceValidator:
         print("\n🛠️ Testing MCP Server Tool Schemas")
         
         try:
-            # Get tools from server
-            if self.server and hasattr(self.server, '_tools'):
-                tools = self.server._tools
-                
+            # Get tools from server - check multiple possible locations
+            tools = None
+            server_to_check = self.server
+            
+            # Try different ways to access tools based on MCP server structure
+            if hasattr(server_to_check, '_tools') and server_to_check._tools:
+                tools = server_to_check._tools
+            elif hasattr(server_to_check, 'server') and hasattr(server_to_check.server, '_tools'):
+                tools = server_to_check.server._tools
+            elif hasattr(server_to_check, 'list_tools'):
+                # Try to get tools via the list_tools method
+                try:
+                    tools_result = await server_to_check.list_tools()
+                    if hasattr(tools_result, 'tools'):
+                        tools = {tool.name: tool for tool in tools_result.tools}
+                except Exception as e:
+                    self.record_test(
+                        "Server tool schemas - List tools",
+                        False,
+                        f"Error listing tools: {e}"
+                    )
+                    tools = None
+            
+            if tools:
+                tool_count = 0
                 for tool_name, tool in tools.items():
+                    tool_count += 1
+                    
+                    # Check if tool has inputSchema
+                    schema = None
                     if hasattr(tool, 'inputSchema'):
                         schema = tool.inputSchema
-                        
+                    elif hasattr(tool, 'input_schema'):
+                        schema = tool.input_schema
+                    elif hasattr(tool, 'schema'):
+                        schema = tool.schema
+                    
+                    if schema:
                         # Validate schema structure
                         valid_schema = self.validate_json_schema(schema)
                         self.record_test(
@@ -594,12 +624,54 @@ class MCPSchemaComplianceValidator:
                             False,
                             "Tool missing inputSchema"
                         )
-            else:
+                
+                # Record successful access
                 self.record_test(
                     "Server tool schemas - Access",
-                    False,
-                    "Cannot access server tools"
+                    True,
+                    f"Successfully accessed {tool_count} server tools"
                 )
+                
+            else:
+                # Try alternative approach - test tool creation directly
+                from ast_grep_mcp.tools import register_tools
+                from mcp.server import Server
+                
+                # Create a test server to see if tools register properly
+                test_server = Server("test-schema-validation")
+                register_tools(test_server, None)  # Pass None for ast_grep_path for schema testing
+                
+                if hasattr(test_server, '_tools') and test_server._tools:
+                    tools = test_server._tools
+                    tool_count = 0
+                    for tool_name, tool in tools.items():
+                        tool_count += 1
+                        schema = getattr(tool, 'inputSchema', None)
+                        if schema:
+                            valid_schema = self.validate_json_schema(schema)
+                            self.record_test(
+                                f"Server tool schema - {tool_name}",
+                                valid_schema,
+                                f"Schema validation {'passed' if valid_schema else 'failed'}"
+                            )
+                        else:
+                            self.record_test(
+                                f"Server tool schema - {tool_name}",
+                                False,
+                                "Tool missing inputSchema"
+                            )
+                    
+                    self.record_test(
+                        "Server tool schemas - Access",
+                        True,
+                        f"Successfully tested {tool_count} tools via direct registration"
+                    )
+                else:
+                    self.record_test(
+                        "Server tool schemas - Access",
+                        False,
+                        "Cannot access server tools through any method"
+                    )
                 
         except Exception as e:
             self.record_test(
