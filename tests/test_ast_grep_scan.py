@@ -1,9 +1,16 @@
+import sys
+from pathlib import Path
+
+# Add src to Python path
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+
+
 class TestErrorHandling:
     """Test error handling and structured responses."""
     
     def test_validation_error_response(self):
         """Test validation error response structure."""
-        from src.ast_grep_mcp.utils import handle_validation_error
+        from ast_grep_mcp.utils import handle_validation_error
         
         error = ValueError("Invalid language 'invalid_lang'")
         result = handle_validation_error(error, "Language validation", "/test/path")
@@ -16,7 +23,7 @@ class TestErrorHandling:
     
     def test_configuration_error_response(self):
         """Test configuration error response structure."""
-        from src.ast_grep_mcp.utils import handle_configuration_error
+        from ast_grep_mcp.utils import handle_configuration_error
         
         error = ValueError("Missing ruleDirs field")
         result = handle_configuration_error(error, "/test/sgconfig.yml")
@@ -29,7 +36,7 @@ class TestErrorHandling:
     
     def test_execution_error_response(self):
         """Test execution error response structure."""
-        from src.ast_grep_mcp.utils import handle_execution_error, ASTGrepNotFoundError
+        from ast_grep_mcp.utils import handle_execution_error, ASTGrepNotFoundError
         
         error = ASTGrepNotFoundError("ast-grep binary not found")
         result = handle_execution_error(error, command=["sg", "search"], path="/test/path")
@@ -44,7 +51,7 @@ class TestErrorHandling:
     
     def test_success_response_structure(self):
         """Test success response structure."""
-        from src.ast_grep_mcp.utils import create_success_response
+        from ast_grep_mcp.utils import create_success_response
         
         data = {"matches": [], "total": 0}
         result = create_success_response(data, "Scan completed successfully")
@@ -56,7 +63,7 @@ class TestErrorHandling:
     
     def test_format_tool_response_json(self):
         """Test tool response formatting for JSON output."""
-        from src.ast_grep_mcp.utils import format_tool_response
+        from ast_grep_mcp.utils import format_tool_response
         
         data = {"violations": [], "summary": {"total": 0}}
         result = format_tool_response(data, "json", True, "Scan completed")
@@ -72,7 +79,7 @@ class TestErrorHandling:
     
     def test_format_tool_response_text_error(self):
         """Test tool response formatting for text output with error."""
-        from src.ast_grep_mcp.utils import format_tool_response, create_error_response
+        from ast_grep_mcp.utils import format_tool_response, create_error_response
         
         error_info = create_error_response(
             "Test Error",

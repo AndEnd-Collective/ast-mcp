@@ -4,18 +4,22 @@ import pytest
 import json
 import tempfile
 import shutil
+import sys
 from pathlib import Path
 from unittest.mock import Mock, AsyncMock, patch
 from typing import Dict, Any, List
 
-from src.ast_grep_mcp.tools import (
+# Add src to Python path
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+
+from ast_grep_mcp.tools import (
     SearchToolInput, 
     ast_grep_search_impl,
     _build_search_args,
     _format_search_results_json,
     _format_search_results_text
 )
-from src.ast_grep_mcp.utils import ASTGrepError
+from ast_grep_mcp.utils import ASTGrepError
 
 
 class TestSearchToolInput:

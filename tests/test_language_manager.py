@@ -6,8 +6,13 @@ mapping, and pattern support functionality.
 import pytest
 import tempfile
 import os
+import sys
 from pathlib import Path
-from src.ast_grep_mcp.utils import LanguageManager
+
+# Add src to Python path
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+
+from ast_grep_mcp.utils import LanguageManager
 
 
 class TestLanguageDetection:

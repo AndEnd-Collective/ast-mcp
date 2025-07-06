@@ -10,16 +10,20 @@ import tempfile
 import pytest
 import yaml
 import json
+import sys
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
+# Add src to Python path
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+
 # Import the modules we're testing
-from src.ast_grep_mcp.config import (
+from ast_grep_mcp.config import (
     ServerConfig, SecurityConfig, PerformanceConfig, MonitoringConfig,
     LoggingConfig, ASTGrepConfig, EnvironmentType, LogLevel, LogFormat,
     ConfigurationManager, ConfigurationError, load_configuration
 )
-from src.ast_grep_mcp.config_migration import (
+from ast_grep_mcp.config_migration import (
     ConfigurationMigrator, LegacyServerConfig, migrate_legacy_configuration
 )
 

@@ -8,11 +8,15 @@ metadata extraction, and special case handling.
 import pytest
 import asyncio
 import tempfile
+import sys
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 
-from src.ast_grep_mcp.utils import FunctionDetector, create_ast_grep_executor
-from src.ast_grep_mcp.resources import FUNCTION_PATTERNS
+# Add src to Python path
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+
+from ast_grep_mcp.utils import FunctionDetector, create_ast_grep_executor
+from ast_grep_mcp.resources import FUNCTION_PATTERNS
 
 
 class TestFunctionDetection:
