@@ -24,20 +24,40 @@ This guide will walk you through everything you need to know to get the most out
 
 ### 1-Minute Setup
 ```bash
-# Install AST-MCP
-pip install ast-mcp
+# Clone and install AST-MCP
+git clone https://github.com/AndEnd-Org/ast-mcp.git
+cd ast-mcp
+pip install -e .
 
 # Verify installation
-ast-mcp --help
+python -c "import ast_grep_mcp; print('✅ Installation successful')"
 ```
 
-### Add to Claude Desktop
+### Add to Your AI Coding Tool
+
+#### Claude Desktop
 Add this to your `claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
     "ast-mcp": {
-      "command": "ast-mcp"
+      "command": "python",
+      "args": ["-m", "ast_grep_mcp.server"],
+      "cwd": "/path/to/ast-mcp"
+    }
+  }
+}
+```
+
+#### Continue IDE / Cursor / Windsurf
+Add this to your MCP configuration:
+```json
+{
+  "mcpServers": {
+    "ast-mcp": {
+      "command": "python",
+      "args": ["-m", "ast_grep_mcp.server"],
+      "cwd": "/path/to/ast-mcp"
     }
   }
 }
@@ -47,30 +67,29 @@ Add this to your `claude_desktop_config.json`:
 
 ## 🔧 Installation Guide
 
-### Option 1: pip (Recommended)
-```bash
-pip install ast-mcp
-```
-
-### Option 2: From Source
+### Option 1: From Source (Current)
 ```bash
 git clone https://github.com/AndEnd-Org/ast-mcp.git
 cd ast-mcp
 pip install -e .
 ```
 
-### Option 3: pipx (Isolated)
+### Option 2: Development Setup
 ```bash
-pipx install ast-mcp
+git clone https://github.com/AndEnd-Org/ast-mcp.git
+cd ast-mcp
+pip install -e .[dev]  # Includes development tools
 ```
+
+> 📋 **Note**: PyPI package coming soon! For now, install from source.
 
 ### Verify Installation
 ```bash
-# Check version
-ast-mcp --version
-
 # Test basic functionality
 python -c "import ast_grep_mcp; print('✅ Installation successful')"
+
+# Test server startup
+python -m ast_grep_mcp.server --help
 ```
 
 ## 📖 Basic Usage
