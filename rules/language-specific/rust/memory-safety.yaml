@@ -1,0 +1,73 @@
+---
+# Rust Memory Safety Pattern Detection
+metadata:
+  version: "1.0.0"
+  author: "AndEnd Team"
+  description: "Detects Rust memory safety patterns and potential issues"
+  creation_date: "2025-07-06"
+  last_edit_date: "2025-07-06"
+
+rule:
+  id: rust-memory-safety
+  language: Rust
+  rule:
+    any:
+      # Unsafe block usage
+      - pattern: |
+          unsafe {
+            $$$UNSAFE_CODE
+          }
+      # Raw pointer usage
+      - pattern: "*const $TYPE"
+      - pattern: "*mut $TYPE"
+      # Manual memory management
+      - pattern: "Box::leak($VALUE)"
+      - pattern: "std::mem::forget($VALUE)"
+      # Potential data races
+      - pattern: |
+          Arc<$TYPE>
+        not:
+          has:
+            pattern: "Mutex<$INNER>"
+      # Clone on large data structures
+      - pattern: "$LARGE_STRUCT.clone()"
+        where:
+          struct_size: ">1KB"
+
+documentation:
+  reasoning: |
+    Rust memory safety analysis helps LLMs:
+    1. Identify potential memory safety issues
+    2. Detect performance-impacting patterns
+    3. Ensure proper ownership handling
+    4. Guide safe concurrent programming
+
+  value_proposition: |
+    - Maintains Rust's memory safety guarantees
+    - Identifies performance bottlenecks
+    - Ensures proper concurrent programming
+    - Guides safe system programming practices
+
+  example_usecase: |
+    **Scenario**: LLM reviewing Rust code for memory safety and performance
+    
+    **Problem**: Need to ensure memory safety while optimizing performance
+    
+    **Solution**: Use this rule to:
+    1. Identify unsafe code blocks that need review
+    2. Find potential data race conditions
+    3. Detect expensive clone operations
+    4. Ensure proper Arc/Mutex usage
+    
+    **Command**: 
+    ```bash
+    ast-grep --config rules/language-specific/rust/memory-safety.yaml src/ --json | jq '.[] | {safety_issue: .rule_id, file: .file, line: .start_line}'
+    ```
+    
+    **Result**: Memory safety analysis with performance optimization suggestions
+
+  llm_assistance_benefits:
+    - "Maintains Rust memory safety guarantees"
+    - "Identifies performance optimization opportunities"
+    - "Ensures safe concurrent programming patterns"
+    - "Guides proper ownership management"

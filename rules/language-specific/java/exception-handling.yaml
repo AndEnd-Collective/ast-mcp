@@ -1,0 +1,82 @@
+---
+# Java Exception Handling Pattern Detection
+metadata:
+  version: "1.0.0"
+  author: "AndEnd Team"
+  description: "Detects Java exception handling patterns and best practices"
+  creation_date: "2025-07-06"
+  last_edit_date: "2025-07-06"
+
+rule:
+  id: java-exception-handling
+  language: Java
+  rule:
+    any:
+      # Try-catch blocks
+      - pattern: |
+          try {
+            $$$BODY
+          } catch ($EXCEPTION $VAR) {
+            $$$HANDLER
+          }
+      # Try-catch-finally
+      - pattern: |
+          try {
+            $$$BODY
+          } catch ($EXCEPTION $VAR) {
+            $$$HANDLER
+          } finally {
+            $$$FINALLY
+          }
+      # Try-with-resources
+      - pattern: |
+          try ($RESOURCE) {
+            $$$BODY
+          }
+      # Throwing exceptions
+      - pattern: "throw new $EXCEPTION($$$ARGS)"
+      - pattern: "throws $EXCEPTION"
+      # Custom exceptions
+      - pattern: |
+          public class $EXCEPTION extends Exception {
+            $$$BODY
+          }
+      - pattern: |
+          public class $EXCEPTION extends RuntimeException {
+            $$$BODY
+          }
+      # Exception chaining
+      - pattern: "throw new $EXCEPTION($MESSAGE, $CAUSE)"
+      # Catching multiple exceptions
+      - pattern: "catch ($EX1 | $EX2 $VAR)"
+
+  severity: high
+  message: "Java exception handling pattern detected - ensure proper error handling and resource management"
+  
+  best_practices:
+    - "Use try-with-resources for auto-closeable resources"
+    - "Don't catch and ignore exceptions"
+    - "Create specific custom exceptions"
+    - "Use exception chaining to preserve stack traces"
+    - "Log exceptions properly"
+    - "Don't use exceptions for control flow"
+    
+  anti_patterns:
+    - |
+      try {
+          // code
+      } catch (Exception e) {
+          // Empty catch block - BAD
+      }
+    - |
+      throw new Exception("error"); // Generic exception - BAD
+      
+  examples:
+    good:
+      - |
+        try (FileInputStream fis = new FileInputStream("file.txt")) {
+            // Process file
+        } catch (IOException e) {
+            logger.error("Failed to read file", e);
+            throw new ProcessingException("Unable to process file", e);
+        }

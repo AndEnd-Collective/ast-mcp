@@ -1,0 +1,75 @@
+---
+# Go Concurrency Pattern Detection
+metadata:
+  version: "1.0.0"
+  author: "AndEnd Team"
+  description: "Detects Go concurrency patterns, goroutines, channels, and potential race conditions"
+  creation_date: "2025-07-06"
+  last_edit_date: "2025-07-06"
+
+rule:
+  id: go-concurrency-patterns
+  language: Go
+  rule:
+    any:
+      # Goroutine creation
+      - pattern: "go $FUNC($$$ARGS)"
+      - pattern: |
+          go func($$$PARAMS) {
+            $$$BODY
+          }($$$ARGS)
+      # Channel operations
+      - pattern: "make(chan $TYPE)"
+      - pattern: "make(chan $TYPE, $SIZE)"
+      - pattern: "$CHAN <- $VALUE"
+      - pattern: "$VAR := <-$CHAN"
+      - pattern: "$VAR, $OK := <-$CHAN"
+      # Select statements
+      - pattern: |
+          select {
+          $$$CASES
+          }
+      - pattern: |
+          case $VAR := <-$CHAN:
+            $$$BODY
+      - pattern: |
+          case <-$CHAN:
+            $$$BODY
+      # Mutex usage
+      - pattern: "sync.Mutex"
+      - pattern: "$MUTEX.Lock()"
+      - pattern: "$MUTEX.Unlock()"
+      - pattern: "sync.RWMutex"
+      # WaitGroup
+      - pattern: "sync.WaitGroup"
+      - pattern: "$WG.Add($N)"
+      - pattern: "$WG.Done()"
+      - pattern: "$WG.Wait()"
+      # Context usage
+      - pattern: "context.Context"
+      - pattern: "context.WithCancel($CTX)"
+      - pattern: "context.WithTimeout($CTX, $TIMEOUT)"
+
+  severity: high
+  message: "Go concurrency pattern detected - ensure proper synchronization and avoid race conditions"
+  
+  best_practices:
+    - "Always call defer wg.Done() after wg.Add()"
+    - "Use context for cancellation and timeouts"
+    - "Avoid sharing memory, communicate by passing messages"
+    - "Close channels from sender side"
+    - "Use select with default case to avoid blocking"
+    
+  examples:
+    good:
+      - |
+        func worker(jobs <-chan int, results chan<- int, wg *sync.WaitGroup) {
+            defer wg.Done()
+            for job := range jobs {
+                results <- job * 2
+            }
+        }
+    race_condition:
+      - |
+        var counter int
+        go func() { counter++ }() // Race condition without mutex

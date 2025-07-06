@@ -1,0 +1,78 @@
+---
+# Python Django Pattern Detection
+metadata:
+  version: "1.0.0"
+  author: "AndEnd Team"
+  description: "Detects Django-specific patterns, anti-patterns, and optimization opportunities"
+  creation_date: "2025-07-06"
+  last_edit_date: "2025-07-06"
+
+rule:
+  id: django-patterns
+  language: Python
+  rule:
+    any:
+      # N+1 query problems
+      - pattern: |
+          for $ITEM in $QUERYSET:
+              $ITEM.$RELATION.$FIELD
+      # Missing select_related/prefetch_related
+      - pattern: |
+          $MODEL.objects.filter($$$FILTERS)
+        not:
+          has:
+            any:
+              - pattern: ".select_related($$$)"
+              - pattern: ".prefetch_related($$$)"
+      # Raw SQL without parameterization
+      - pattern: |
+          cursor.execute(f"SELECT * FROM {$TABLE} WHERE id = {$ID}")
+      # Missing Django model validation
+      - pattern: |
+          class $MODEL(models.Model):
+              $$$FIELDS
+        not:
+          has:
+            pattern: "def clean(self):"
+      # Inefficient queryset evaluation
+      - pattern: "len($QUERYSET)"
+        where:
+          queryset_type: "QuerySet"
+
+documentation:
+  reasoning: |
+    Django pattern analysis helps LLMs:
+    1. Identify performance bottlenecks in Django apps
+    2. Detect security vulnerabilities in ORM usage
+    3. Suggest Django best practices
+    4. Optimize database interactions
+
+  value_proposition: |
+    - Prevents N+1 query performance issues
+    - Ensures secure database interactions
+    - Optimizes Django ORM usage
+    - Maintains Django best practices
+
+  example_usecase: |
+    **Scenario**: LLM optimizing Django application performance
+    
+    **Problem**: Application experiencing slow database queries and performance issues
+    
+    **Solution**: Use this rule to:
+    1. Identify N+1 query patterns
+    2. Find missing query optimizations
+    3. Detect insecure raw SQL usage
+    4. Suggest ORM improvements
+    
+    **Command**: 
+    ```bash
+    ast-grep --config rules/language-specific/python/django-patterns.yaml . --json | jq '.[] | {performance_issue: .rule_id, file: .file, model: .matches[].meta_vars.MODEL}'
+    ```
+    
+    **Result**: Django performance optimization roadmap with specific database improvements
+
+  llm_assistance_benefits:
+    - "Prevents N+1 query performance issues automatically"
+    - "Ensures secure Django ORM practices"
+    - "Optimizes database interaction patterns"
+    - "Guides Django architectural improvements"

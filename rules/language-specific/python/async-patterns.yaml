@@ -1,0 +1,80 @@
+---
+# Python Async Pattern Detection
+metadata:
+  version: "1.0.0"
+  author: "AndEnd Team"
+  description: "Detects Python async/await patterns and asyncio optimization opportunities"
+  creation_date: "2025-07-06"
+  last_edit_date: "2025-07-06"
+
+rule:
+  id: python-async-patterns
+  language: Python
+  rule:
+    any:
+      # Blocking calls in async functions
+      - pattern: |
+          async def $NAME($$$PARAMS):
+              $$$BODY
+              time.sleep($DURATION)
+              $$$REST
+      # Missing await on coroutines
+      - pattern: |
+          async def $NAME($$$PARAMS):
+              $COROUTINE_CALL()
+        not:
+          has:
+            pattern: "await $COROUTINE_CALL()"
+      # Inefficient sequential awaits
+      - pattern: |
+          result1 = await $ASYNC1
+          result2 = await $ASYNC2
+          result3 = await $ASYNC3
+      # Sync function calling async without proper handling
+      - pattern: |
+          def $SYNC_FUNC($$$PARAMS):
+              $ASYNC_CALL()
+        where:
+          async_call: "async"
+      # Missing asyncio.gather for parallel execution
+      - pattern: |
+          for $ITEM in $ITEMS:
+              await $ASYNC_OPERATION($ITEM)
+
+documentation:
+  reasoning: |
+    Python async pattern analysis helps LLMs:
+    1. Identify async/sync mixing issues
+    2. Detect performance bottlenecks in async code
+    3. Suggest parallel execution opportunities
+    4. Ensure proper asyncio usage
+
+  value_proposition: |
+    - Prevents blocking operations in async code
+    - Optimizes async performance through parallelization
+    - Ensures proper async/sync boundaries
+    - Maximizes asyncio efficiency
+
+  example_usecase: |
+    **Scenario**: LLM optimizing Python async application performance
+    
+    **Problem**: Async application not performing as expected due to blocking operations
+    
+    **Solution**: Use this rule to:
+    1. Find blocking calls in async functions
+    2. Identify missing await statements
+    3. Detect sequential await opportunities
+    4. Suggest asyncio.gather optimizations
+    
+    **Command**: 
+    ```bash
+    ast-grep --config rules/language-specific/python/async-patterns.yaml . --json | jq '.[] | {async_issue: .rule_id, file: .file, function: .matches[].meta_vars.NAME}'
+    ```
+    
+    **Result**: Async performance optimization plan with specific improvements
+
+  llm_assistance_benefits:
+    - "Prevents async performance bottlenecks"
+    - "Ensures proper async/sync separation"
+    - "Maximizes parallel execution opportunities"
+    - "Optimizes asyncio application performance"

@@ -1,0 +1,69 @@
+---
+# Modern C++ Patterns Detection
+metadata:
+  version: "1.0.0"
+  author: "AndEnd Team"
+  description: "Detects modern C++ features and suggests improvements"
+  creation_date: "2025-07-06"
+  last_edit_date: "2025-07-06"
+
+rule:
+  id: modern-cpp-patterns
+  language: C++
+  rule:
+    any:
+      # Auto type deduction
+      - pattern: "auto $VAR = $VALUE"
+      - pattern: "auto& $VAR = $VALUE"
+      - pattern: "auto&& $VAR = $VALUE"
+      # Range-based for loops
+      - pattern: |
+          for (auto& $VAR : $CONTAINER) {
+            $$$BODY
+          }
+      - pattern: |
+          for (const auto& $VAR : $CONTAINER) {
+            $$$BODY
+          }
+      # Lambda expressions
+      - pattern: "[$$$CAPTURE]($$$PARAMS) { $$$BODY }"
+      - pattern: "[$$$CAPTURE]($$$PARAMS) -> $TYPE { $$$BODY }"
+      # nullptr usage
+      - pattern: "$VAR = nullptr"
+      - pattern: "if ($VAR != nullptr)"
+      # constexpr
+      - pattern: "constexpr $TYPE $VAR = $VALUE"
+      - pattern: "constexpr $TYPE $FUNC($$$PARAMS) { $$$BODY }"
+      # override and final
+      - pattern: "virtual $TYPE $FUNC($$$PARAMS) override"
+      - pattern: "class $CLASS final"
+      # Uniform initialization
+      - pattern: "$TYPE $VAR{$$$ARGS}"
+      # std::array instead of C arrays
+      - pattern: "std::array<$TYPE, $SIZE> $VAR"
+
+  severity: medium
+  message: "Modern C++ pattern detected - ensure you're using latest standards effectively"
+  
+  suggestions:
+    - "Use auto for type deduction when type is obvious"
+    - "Prefer range-based for loops over traditional loops"
+    - "Use nullptr instead of NULL or 0"
+    - "Use constexpr for compile-time constants"
+    - "Use override keyword for virtual function overrides"
+    - "Prefer uniform initialization {}"
+    
+  examples:
+    modern:
+      - |
+        auto values = std::vector<int>{1, 2, 3, 4, 5};
+        for (const auto& value : values) {
+            std::cout << value << std::endl;
+        }
+    legacy:
+      - |
+        std::vector<int> values;
+        values.push_back(1);
+        for (int i = 0; i < values.size(); ++i) {
+            std::cout << values[i] << std::endl;
+        }

@@ -1,0 +1,74 @@
+---
+# Dead Code Detection Rule
+metadata:
+  version: "1.0.0"
+  author: "AndEnd Team"
+  description: "Identifies potentially unused code including functions, variables, and imports"
+  creation_date: "2025-07-06"
+  last_edit_date: "2025-07-06"
+
+rule:
+  id: dead-code-detection
+  language: TypeScript
+  rule:
+    any:
+      # Unused function declarations
+      - pattern: "function $NAME($$$PARAMS) { $$$BODY }"
+        not:
+          has:
+            any:
+              - pattern: "$NAME($$$ARGS)"
+              - pattern: "export { $NAME }"
+              - pattern: "export function $NAME"
+      # Unused variables
+      - pattern: "const $VAR = $VALUE"
+        not:
+          has:
+            pattern: "$VAR"
+      # Unused imports
+      - pattern: "import { $IMPORTS } from '$MODULE'"
+        not:
+          has:
+            pattern: "$IMPORTS"
+      # Unreachable code
+      - pattern: |
+          return $VALUE;
+          $$$UNREACHABLE
+
+documentation:
+  reasoning: |
+    Dead code detection helps LLMs:
+    1. Clean up codebases efficiently
+    2. Reduce bundle sizes
+    3. Improve code maintainability
+    4. Focus analysis on relevant code
+
+  value_proposition: |
+    - Automated cleanup identification
+    - Reduces codebase complexity
+    - Improves performance through smaller bundles
+    - Focuses development effort on active code
+
+  example_usecase: |
+    **Scenario**: LLM performing codebase cleanup before major refactoring
+    
+    **Problem**: Hard to identify what code is actually used vs legacy remnants
+    
+    **Solution**: Use this rule to:
+    1. Identify truly unused functions
+    2. Find orphaned imports
+    3. Locate unreachable code paths
+    4. Safe cleanup prioritization
+    
+    **Command**: 
+    ```bash
+    ast-grep --config rules/use-cases/refactoring/dead-code-detection.yaml src/ --json | jq '.[] | {file: .file, dead_code_type: .rule_id, name: .matches[].meta_vars.NAME // .matches[].meta_vars.VAR}'
+    ```
+    
+    **Result**: Comprehensive dead code inventory for safe removal
+
+  llm_assistance_benefits:
+    - "Enables safe automated code cleanup"
+    - "Reduces codebase maintenance burden"
+    - "Improves focus on relevant code"
+    - "Optimizes bundle sizes"

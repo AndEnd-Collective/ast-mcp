@@ -1,0 +1,193 @@
+---
+# AI Context Loss Pattern Detection
+metadata:
+  version: "1.0.0"
+  author: "AndEnd Team"
+  description: "Detects patterns indicating AI context window limitations and inconsistent code generation"
+  creation_date: "2025-07-06"
+  last_edit_date: "2025-07-06"
+  use_case: "Identifying code inconsistencies caused by AI context window limitations"
+
+rule:
+  id: ai-context-loss-patterns
+  language: Any
+  rule:
+    any:
+      # Inconsistent naming conventions within same file
+      - pattern: "function get$NAME" # Mixed with camelCase
+      - pattern: "function fetch_$NAME" # Mixed with snake_case
+      - pattern: "const API_$NAME" # Mixed with kebab-case
+      - pattern: "let $name-data" # Inconsistent patterns
+      
+      # Duplicated or conflicting function definitions
+      - pattern: |
+          function $NAME($$$PARAMS1) {
+            $$$BODY1
+          }
+          
+          function $NAME($$$PARAMS2) {
+            $$$BODY2
+          }
+      
+      # Inconsistent error handling patterns in same file
+      - pattern: "throw new Error($MSG1)" # Mixed with
+      - pattern: "return { error: $MSG2 }" # Different error patterns
+      
+      # Variable redeclaration with different types
+      - pattern: "let $VAR = $VALUE1"
+      - pattern: "const $VAR = $VALUE2" # Redeclaring same variable
+      
+      # Inconsistent API patterns
+      - pattern: "async function api$NAME1" # Mixed with
+      - pattern: "function handle$NAME2" # Different async patterns
+      
+      # Breaking previously established patterns
+      - pattern: "if ($CONDITION) return $VALUE;" # Mixed with
+      - pattern: "if ($CONDITION) { return $VALUE; }" # Inconsistent style
+      
+      # Comments indicating context confusion
+      - pattern: "// Wait, what was this for?"
+      - pattern: "// TODO: Check if this is still needed"
+      - pattern: "// This might conflict with above"
+      - pattern: "// Redefining this again"
+      
+      # Forgotten imports or dependencies
+      - pattern: "import { $ITEM } from '$LIB1'"
+      - pattern: "const $ITEM = require('$LIB2')" # Mixed import styles
+      
+      # Inconsistent data structures
+      - pattern: "const config = { $KEY1: $VALUE1 }" # Mixed with
+      - pattern: "const options = { $KEY2: $VALUE2 }" # Similar but different naming
+      
+      # Repeated similar functions with slight variations
+      - pattern: "function process$TYPE1($PARAM) { $$$BODY1 }"
+      - pattern: "function handle$TYPE2($PARAM) { $$$BODY2 }" # Similar purpose, different name
+
+  severity: medium
+  message: "AI context loss pattern detected - code shows inconsistency indicating lost context"
+  
+  context_loss_indicators:
+    naming_inconsistencies:
+      - "Mixed camelCase and snake_case in same file"
+      - "Different prefixes for similar functions"
+      - "Inconsistent constant naming patterns"
+      - "Variable naming that doesn't follow established patterns"
+      
+    architectural_drift:
+      - "Different error handling patterns within same module"
+      - "Inconsistent async/sync function declarations"
+      - "Mixed import/require statements"
+      - "Different data structure patterns for similar data"
+      
+    functional_conflicts:
+      - "Duplicate function names with different signatures"
+      - "Similar functions with different implementations"
+      - "Conflicting configuration patterns"
+      - "Overlapping but inconsistent utility functions"
+      
+    forgotten_context:
+      - "Comments questioning previous decisions"
+      - "TODO items referencing unclear previous work"
+      - "Redefined variables or constants"
+      - "Imported modules that are never used"
+
+  ai_context_limitations:
+    common_causes:
+      - "Context window exceeded during generation"
+      - "AI forgot earlier conversation context"
+      - "Multiple sessions without proper state transfer"
+      - "Large codebase overwhelms AI working memory"
+      
+    symptoms:
+      - "Code style suddenly changes mid-file"
+      - "Previously established patterns are abandoned"
+      - "Duplicate implementations of same functionality"
+      - "References to undefined functions or variables"
+      
+    prevention_strategies:
+      - "Break large changes into smaller, focused sessions"
+      - "Maintain explicit context documentation"
+      - "Review AI-generated code for consistency"
+      - "Use consistent prompting patterns"
+
+  resolution_approaches:
+    immediate_fixes:
+      - "Standardize naming conventions throughout file"
+      - "Consolidate duplicate or similar functions"
+      - "Establish consistent error handling pattern"
+      - "Remove unused imports and variables"
+      
+    architectural_alignment:
+      - "Define and document coding standards"
+      - "Create consistent patterns for common operations"
+      - "Establish clear separation of concerns"
+      - "Implement consistent data flow patterns"
+      
+    quality_assurance:
+      - "Code review for consistency violations"
+      - "Automated linting for style consistency"
+      - "Unit tests to verify expected behavior"
+      - "Documentation of architectural decisions"
+
+  examples:
+    context_confused_code:
+      - |
+        // ❌ Shows AI context loss - inconsistent patterns
+        function getUserData(id) {
+          const response = fetch(`/api/users/${id}`);
+          return response.json();
+        }
+        
+        // Different naming pattern suddenly
+        async function fetch_user_profile(userId) {
+          try {
+            const result = await fetch(`/api/users/${userId}/profile`);
+            return result.json();
+          } catch (error) {
+            throw new Error(error.message);
+          }
+        }
+        
+        // Different error handling pattern
+        function getUser(id) {
+          const data = fetch(`/api/users/${id}`);
+          if (!data) return { error: 'User not found' }; // Different error style
+          return data;
+        }
+        
+        // Wait, redefining similar function?
+        function getUserData(userId) { // Duplicate function name!
+          return fetch(`/users/${userId}`).then(r => r.json());
+        }
+        
+    consistent_refactored_code:
+      - |
+        // ✅ Consistent patterns after context restoration
+        class UserService {
+          async fetchUser(userId: string): Promise<User> {
+            try {
+              const response = await this.apiClient.get(`/users/${userId}`);
+              return UserSchema.parse(response.data);
+            } catch (error) {
+              throw new UserFetchError(`Failed to fetch user ${userId}`, error);
+            }
+          }
+          
+          async fetchUserProfile(userId: string): Promise<UserProfile> {
+            try {
+              const response = await this.apiClient.get(`/users/${userId}/profile`);
+              return UserProfileSchema.parse(response.data);
+            } catch (error) {
+              throw new UserFetchError(`Failed to fetch profile for ${userId}`, error);
+            }
+          }
+          
+          async fetchUserSettings(userId: string): Promise<UserSettings> {
+            try {
+              const response = await this.apiClient.get(`/users/${userId}/settings`);
+              return UserSettingsSchema.parse(response.data);
+            } catch (error) {
+              throw new UserFetchError(`Failed to fetch settings for ${userId}`, error);
+            }
+          }
+        }

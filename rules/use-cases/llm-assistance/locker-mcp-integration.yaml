@@ -1,0 +1,114 @@
+---
+# Locker-MCP Integration Pattern Detection
+metadata:
+  version: "1.0.0"
+  author: "AndEnd Team"
+  description: "Detects patterns for coordinating AST-MCP analysis with Locker-MCP file state management"
+  creation_date: "2025-07-06"
+  last_edit_date: "2025-07-06"
+  use_case: "LLM workflow coordination between AST analysis and file locking"
+
+rule:
+  id: locker-mcp-integration
+  language: Any
+  rule:
+    any:
+      # Locker-MCP header comments indicating file state
+      - pattern: |
+          // LOCKED: $REASON
+          // Context: $CONTEXT
+          // Confidence: $CONFIDENCE%
+          // Timestamp: $TIMESTAMP
+      - pattern: |
+          /* LOCKED: $REASON
+           * Context: $CONTEXT  
+           * Confidence: $CONFIDENCE%
+           * Timestamp: $TIMESTAMP
+           */
+      # Python docstring format
+      - pattern: |
+          """
+          LOCKED: $REASON
+          Context: $CONTEXT
+          Confidence: $CONFIDENCE%
+          Timestamp: $TIMESTAMP
+          """
+      # Files that should be analyzed before editing
+      - pattern: |
+          // TODO: Analyze with AST-MCP before editing
+      - pattern: |
+          # ANALYZE_FIRST: Use ast-grep to understand structure
+      # Coordination patterns
+      - pattern: |
+          // AST_ANALYZED: $DATE - Structure understood
+          // SAFE_TO_EDIT: $CONFIDENCE% confidence
+      
+  workflow_integration:
+    step_1: "Use AST-MCP to analyze file structure and dependencies"
+    step_2: "Determine edit confidence based on AST analysis"
+    step_3: "Check Locker-MCP state before proceeding with edits"
+    step_4: "If locked-context, evaluate confidence against threshold"
+    step_5: "Perform edits only if confidence is sufficient"
+    step_6: "Update Locker-MCP state after successful changes"
+
+  severity: high
+  message: "File shows coordination between AST analysis and lock state - respect file protection"
+  
+  locker_mcp_states:
+    unlocked: "File can be edited freely after AST analysis"
+    locked_context: "File requires confidence check - use AST-MCP to assess impact"
+    locked: "File is protected - require explicit unlock before editing"
+    
+  ast_mcp_analysis_points:
+    - "Function dependencies and call graphs"
+    - "Import/export relationships"
+    - "Class hierarchies and inheritance"
+    - "Variable scope and usage patterns"
+    - "Test coverage and related test files"
+    
+  confidence_factors:
+    high_confidence_80_plus:
+      - "AST analysis shows isolated function with no external dependencies"
+      - "Change affects only private methods or internal implementation"
+      - "Comprehensive test coverage exists for the modified area"
+    medium_confidence_50_80:
+      - "AST analysis shows limited external dependencies"
+      - "Change affects public API but usage patterns are well understood"
+      - "Partial test coverage exists"
+    low_confidence_below_50:
+      - "AST analysis reveals complex dependency chains"
+      - "Change affects core functionality with widespread usage"
+      - "Limited or no test coverage"
+      
+  examples:
+    coordination_workflow:
+      - |
+        # 1. AST-MCP Analysis
+        ast_grep_search --pattern 'function $name' --path ./src/core.js
+        
+        # 2. Check Locker-MCP state
+        locker_status ./src/core.js
+        # Result: locked-context (requires 70% confidence)
+        
+        # 3. Analyze dependencies
+        ast_grep_scan --pattern 'import.*core' --path ./src/
+        
+        # 4. Assess confidence based on analysis
+        # - Function is used in 15 files
+        # - No test coverage for this function
+        # - Confidence: 30% (below threshold)
+        
+        # 5. Decision: Request unlock or improve tests first
+        
+    good_practice:
+      - |
+        /*
+         * LOCKED: Core authentication logic - high risk
+         * Context: Central auth system used across entire application
+         * Confidence: 85% (Last edit: 2025-07-06)
+         * AST_ANALYZED: 2025-07-06 - 23 dependent files found
+         * SAFE_TO_EDIT: Only with comprehensive testing
+         */
+        function authenticateUser(credentials) {
+            // Implementation protected by lock
+        }

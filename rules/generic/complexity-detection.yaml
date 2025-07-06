@@ -1,0 +1,69 @@
+---
+# Code Complexity Detection Rule
+metadata:
+  version: "1.0.0"
+  author: "AndEnd Team"
+  description: "Detects high complexity code patterns that may need refactoring"
+  creation_date: "2025-07-06"
+  last_edit_date: "2025-07-06"
+
+rule:
+  id: complexity-detection
+  language: TypeScript
+  rule:
+    any:
+      # Deep nesting
+      - pattern: |
+          if ($COND1) {
+            if ($COND2) {
+              if ($COND3) {
+                if ($COND4) {
+                  $$$BODY
+                }
+              }
+            }
+          }
+      # Long parameter lists
+      - pattern: "function $NAME($P1, $P2, $P3, $P4, $P5, $P6, $$$REST) { $$$BODY }"
+      # Long method chains
+      - pattern: "$OBJ.$M1().$M2().$M3().$M4().$M5()"
+      # Complex ternary
+      - pattern: "$COND1 ? ($COND2 ? $A : $B) : ($COND3 ? $C : $D)"
+
+documentation:
+  reasoning: |
+    Complexity detection helps LLMs:
+    1. Identify refactoring candidates
+    2. Understand code maintainability
+    3. Suggest architectural improvements
+    4. Guide development decisions
+
+  value_proposition: |
+    - Objective complexity measurement vs subjective assessment
+    - Enables systematic code quality improvement
+    - Guides LLM refactoring suggestions
+    - Prevents technical debt accumulation
+
+  example_usecase: |
+    **Scenario**: LLM reviewing code for refactoring opportunities
+    
+    **Problem**: Subjective complexity assessment leads to inconsistent recommendations
+    
+    **Solution**: Use this rule to:
+    1. Identify objectively complex code
+    2. Prioritize refactoring efforts
+    3. Suggest specific improvement patterns
+    4. Track complexity reduction over time
+    
+    **Command**: 
+    ```bash
+    ast-grep --config rules/generic/complexity-detection.yaml src/ --json | jq '.[] | {file: .file, complexity_type: .rule_id, line: .start_line}'
+    ```
+    
+    **Result**: Prioritized list of complexity hotspots for targeted refactoring
+
+  llm_assistance_benefits:
+    - "Provides objective refactoring priorities"
+    - "Enables systematic code quality improvement"
+    - "Guides architectural decision making"
+    - "Prevents complexity accumulation"

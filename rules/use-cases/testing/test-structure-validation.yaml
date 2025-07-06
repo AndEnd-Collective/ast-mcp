@@ -1,0 +1,84 @@
+---
+# Test Structure Validation Rule
+metadata:
+  version: "1.0.0"
+  author: "AndEnd Team"
+  description: "Validates test case structure and coherency patterns"
+  creation_date: "2025-07-06"
+  last_edit_date: "2025-07-06"
+
+rule:
+  id: test-structure-validation
+  language: TypeScript
+  rule:
+    any:
+      # Proper test structure (Arrange-Act-Assert)
+      - pattern: |
+          test('$TEST_NAME', () => {
+            // Arrange
+            $$$ARRANGE
+            
+            // Act
+            $$$ACT
+            
+            // Assert
+            $$$ASSERT
+          })
+      # Missing assertions
+      - pattern: |
+          test('$TEST_NAME', () => {
+            $$$BODY
+          })
+        not:
+          has:
+            any:
+              - pattern: "expect($$$)"
+              - pattern: "assert($$$)"
+              - pattern: "should($$$)"
+      # Test isolation issues
+      - pattern: |
+          let $SHARED_STATE;
+          test('$TEST1', () => {
+            $SHARED_STATE = $VALUE;
+          })
+          test('$TEST2', () => {
+            expect($SHARED_STATE)
+          })
+
+documentation:
+  reasoning: |
+    Test structure validation helps LLMs:
+    1. Ensure test quality and reliability
+    2. Identify missing test components
+    3. Validate test isolation
+    4. Maintain testing best practices
+
+  value_proposition: |
+    - Ensures comprehensive test coverage
+    - Identifies test quality issues
+    - Maintains test reliability
+    - Guides test improvement efforts
+
+  example_usecase: |
+    **Scenario**: LLM reviewing test suite for quality and completeness
+    
+    **Problem**: Inconsistent test structure leads to unreliable tests
+    
+    **Solution**: Use this rule to:
+    1. Validate test structure consistency
+    2. Identify missing assertions
+    3. Check test isolation
+    4. Ensure proper test organization
+    
+    **Command**: 
+    ```bash
+    ast-grep --config rules/use-cases/testing/test-structure-validation.yaml test/ --json | jq '.[] | {test_issue: .rule_id, file: .file, test_name: .matches[].meta_vars.TEST_NAME}'
+    ```
+    
+    **Result**: Complete test quality assessment with specific issues identified
+
+  llm_assistance_benefits:
+    - "Ensures test suite reliability through structure validation"
+    - "Identifies missing test components automatically"
+    - "Maintains consistent testing patterns"
+    - "Guides test quality improvements"

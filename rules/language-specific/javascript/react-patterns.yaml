@@ -1,0 +1,83 @@
+---
+# React Component Pattern Detection
+metadata:
+  version: "1.0.0"
+  author: "AndEnd Team"
+  description: "Detects React component patterns, hooks usage, and optimization opportunities"
+  creation_date: "2025-07-06"
+  last_edit_date: "2025-07-06"
+
+rule:
+  id: react-patterns
+  language: TypeScript
+  rule:
+    any:
+      # Functional component with hooks
+      - pattern: |
+          function $COMPONENT($PROPS) {
+            $$$HOOKS
+            return $JSX;
+          }
+      # Missing React.memo for expensive components
+      - pattern: |
+          function $COMPONENT($PROPS) {
+            $EXPENSIVE_COMPUTATION;
+            $$$REST
+            return $JSX;
+          }
+        not:
+          has:
+            pattern: "React.memo"
+      # useEffect without dependencies
+      - pattern: "useEffect(() => { $$$BODY })"
+        not:
+          has:
+            pattern: "useEffect(() => { $$$BODY }, [$$$DEPS])"
+      # useState with complex objects (should use useReducer)
+      - pattern: |
+          const [$STATE, $SETTER] = useState({
+            $PROP1: $VAL1,
+            $PROP2: $VAL2,
+            $PROP3: $VAL3,
+            $$$MORE_PROPS
+          })
+      # Inline event handlers (performance issue)
+      - pattern: "onClick={() => $HANDLER}"
+
+documentation:
+  reasoning: |
+    React pattern analysis helps LLMs:
+    1. Identify performance optimization opportunities
+    2. Detect hooks usage issues
+    3. Suggest component architecture improvements
+    4. Ensure React best practices
+
+  value_proposition: |
+    - Optimizes React app performance automatically
+    - Identifies hooks anti-patterns
+    - Suggests architectural improvements
+    - Ensures React best practices compliance
+
+  example_usecase: |
+    **Scenario**: LLM optimizing React app performance
+    
+    **Problem**: App experiencing performance issues due to unnecessary re-renders
+    
+    **Solution**: Use this rule to:
+    1. Find components missing React.memo
+    2. Identify useEffect dependency issues
+    3. Detect inline handler performance problems
+    4. Suggest useState to useReducer migrations
+    
+    **Command**: 
+    ```bash
+    ast-grep --config rules/language-specific/javascript/react-patterns.yaml src/components/ --json | jq '.[] | {optimization: .rule_id, component: .matches[].meta_vars.COMPONENT, file: .file}'
+    ```
+    
+    **Result**: React performance optimization roadmap with specific components
+
+  llm_assistance_benefits:
+    - "Identifies React performance bottlenecks automatically"
+    - "Suggests specific optimization strategies"
+    - "Ensures hooks best practices"
+    - "Guides component architecture improvements"

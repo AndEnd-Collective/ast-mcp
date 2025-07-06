@@ -1,0 +1,77 @@
+---
+# Python Security Pattern Detection
+metadata:
+  version: "1.0.0"
+  author: "AndEnd Team"
+  description: "Detects Python security vulnerabilities and anti-patterns"
+  creation_date: "2025-07-06"
+  last_edit_date: "2025-07-06"
+
+rule:
+  id: python-security-patterns
+  language: Python
+  rule:
+    any:
+      # SQL injection vulnerabilities
+      - pattern: |
+          cursor.execute(f"SELECT * FROM users WHERE id = {$USER_INPUT}")
+      # Command injection vulnerabilities
+      - pattern: |
+          os.system(f"$COMMAND {$USER_INPUT}")
+      # Pickle deserialization (dangerous)
+      - pattern: "pickle.loads($DATA)"
+        where:
+          data_source: "untrusted"
+      # eval/exec with user input
+      - pattern: "eval($USER_INPUT)"
+      - pattern: "exec($USER_INPUT)"
+      # Hardcoded secrets
+      - pattern: |
+          $VAR = "$SECRET"
+        where:
+          secret_pattern: "(password|secret|key|token|api_key)"
+      # Insecure random number generation
+      - pattern: "random.random()"
+        where:
+          context: "security"
+      # Path traversal vulnerabilities
+      - pattern: |
+          open(f"$BASE_PATH/{$USER_INPUT}", $MODE)
+
+documentation:
+  reasoning: |
+    Python security pattern analysis helps LLMs:
+    1. Identify critical security vulnerabilities
+    2. Prevent injection attacks
+    3. Detect insecure coding patterns
+    4. Ensure secure development practices
+
+  value_proposition: |
+    - Prevents critical security vulnerabilities
+    - Identifies injection attack vectors
+    - Ensures secure coding practices
+    - Protects against data breaches
+
+  example_usecase: |
+    **Scenario**: LLM performing security audit of Python application
+    
+    **Problem**: Need to identify potential security vulnerabilities before deployment
+    
+    **Solution**: Use this rule to:
+    1. Find SQL injection vulnerabilities
+    2. Identify command injection risks
+    3. Detect insecure deserialization
+    4. Locate hardcoded secrets
+    
+    **Command**: 
+    ```bash
+    ast-grep --config rules/language-specific/python/security-patterns.yaml . --json | jq '.[] | {vulnerability: .rule_id, file: .file, line: .start_line, severity: "HIGH"}'
+    ```
+    
+    **Result**: Security vulnerability report with specific remediation guidance
+
+  llm_assistance_benefits:
+    - "Prevents critical security breaches"
+    - "Identifies injection vulnerabilities automatically"
+    - "Ensures secure coding practices"
+    - "Protects sensitive data and systems"

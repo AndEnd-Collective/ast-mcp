@@ -1,0 +1,81 @@
+---
+# Test Coverage Analysis Rule
+metadata:
+  version: "1.0.0"
+  author: "AndEnd Team"
+  description: "Analyzes test coverage patterns and identifies untested code paths"
+  creation_date: "2025-07-06"
+  last_edit_date: "2025-07-06"
+
+rule:
+  id: test-coverage-analysis
+  language: TypeScript
+  rule:
+    any:
+      # Public methods without tests
+      - pattern: |
+          export class $CLASS {
+            public $METHOD($$$PARAMS) {
+              $$$BODY
+            }
+          }
+        not:
+          file_pattern: "*.test.*"
+          has:
+            pattern: "describe('$CLASS'"
+      # Error paths without tests
+      - pattern: |
+          if ($ERROR_CONDITION) {
+            throw new Error($MESSAGE);
+          }
+        not:
+          has:
+            pattern: "expect(() => $$$).toThrow()"
+      # Async functions without async tests
+      - pattern: "async function $NAME($$$PARAMS) { $$$BODY }"
+        not:
+          has:
+            pattern: "await $NAME"
+      # Edge cases patterns
+      - pattern: |
+          if ($INPUT === null || $INPUT === undefined) {
+            $$$EDGE_CASE
+          }
+
+documentation:
+  reasoning: |
+    Test coverage analysis helps LLMs:
+    1. Identify untested code paths
+    2. Find missing error scenario tests
+    3. Ensure edge case coverage
+    4. Guide test creation priorities
+
+  value_proposition: |
+    - Systematic identification of coverage gaps
+    - Ensures robust error handling tests
+    - Identifies missing edge case scenarios
+    - Guides test development priorities
+
+  example_usecase: |
+    **Scenario**: LLM ensuring comprehensive test coverage before release
+    
+    **Problem**: Hard to identify what code paths lack test coverage
+    
+    **Solution**: Use this rule to:
+    1. Find untested public methods
+    2. Identify missing error path tests
+    3. Locate untested edge cases
+    4. Prioritize test creation efforts
+    
+    **Command**: 
+    ```bash
+    ast-grep --config rules/use-cases/testing/test-coverage-analysis.yaml src/ --json | jq '.[] | {coverage_gap: .rule_id, file: .file, method: .matches[].meta_vars.METHOD // .matches[].meta_vars.NAME}'
+    ```
+    
+    **Result**: Comprehensive coverage gap analysis with prioritized test creation list
+
+  llm_assistance_benefits:
+    - "Identifies coverage gaps systematically"
+    - "Ensures comprehensive error scenario testing"
+    - "Guides test development priorities"
+    - "Improves code reliability"
