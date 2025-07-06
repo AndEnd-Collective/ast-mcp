@@ -2,22 +2,6 @@
 
 **Transform how AI understands your code with blazing-fast AST-powered semantic search**
 
-<!-- Installation Badges -->
-<p align="center">
-  <a href="https://cursor.sh/settings/rules?install=https://github.com/AndEnd-Org/ast-mcp">
-    <img src="https://img.shields.io/badge/Install%20with-Cursor-blue?style=for-the-badge&logo=cursor&logoColor=white" alt="Install with Cursor">
-  </a>
-  <a href="https://marketplace.visualstudio.com/items?itemName=continue.continue">
-    <img src="https://img.shields.io/badge/Install%20with-Continue-green?style=for-the-badge&logo=visualstudiocode&logoColor=white" alt="Install with Continue">
-  </a>
-  <a href="https://codeium.com/windsurf">
-    <img src="https://img.shields.io/badge/Install%20with-Windsurf-purple?style=for-the-badge&logo=codeium&logoColor=white" alt="Install with Windsurf">
-  </a>
-  <a href="https://claude.ai/code">
-    <img src="https://img.shields.io/badge/Install%20with-Claude%20Code-orange?style=for-the-badge&logo=anthropic&logoColor=white" alt="Install with Claude Code">
-  </a>
-</p>
-
 A production-ready [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server that supercharges AI assistants with semantic code analysis using [ast-grep](https://ast-grep.github.io/). Skip the slow, inaccurate text-based searches and unlock true code understanding.
 
 ## ⚡ Why AST-MCP Changes Everything
