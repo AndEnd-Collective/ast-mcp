@@ -365,33 +365,8 @@ jobs:
           echo "📊 Validation results generated successfully"
           
           # Extract and display key metrics
-          python3 -c "
-import json
-with open('tests/mcp_validation_results.json', 'r') as f:
-    data = json.load(f)
-    
-print('🎯 MCP Validation Results Summary:')
-total_modules = len([k for k in data.keys() if k.startswith('test_')])
-passing_modules = len([k for k, v in data.items() if k.startswith('test_') and v.get('return_code', 1) == 0])
-
-print(f'✅ Modules Passed: {passing_modules}/{total_modules}')
-
-# Check specific compliance targets
-for module, results in data.items():
-    if module.startswith('test_mcp_'):
-        success_rate = results.get('success_rate', 0)
-        total_tests = results.get('total_tests', 0)
-        passed_tests = results.get('passed_tests', 0)
-        
-        status = '✅' if success_rate >= 90 else '⚠️' if success_rate >= 75 else '❌'
-        print(f'{status} {results.get(\"name\", module)}: {success_rate:.1f}% ({passed_tests}/{total_tests})')
-        
-        # Fail if any critical module is below 85%
-        if 'protocol' in module.lower() or 'integration' in module.lower():
-            if success_rate < 85:
-                print(f'❌ CRITICAL FAILURE: {module} below 85% threshold!')
-                exit(1)
-"
+          echo "📊 Analyzing MCP validation results..."
+          python3 scripts/analyze_validation_results.py tests/mcp_validation_results.json
         else
           echo "❌ Validation results file not found!"
           exit 1
