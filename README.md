@@ -41,30 +41,77 @@ A production-ready [Model Context Protocol (MCP)](https://modelcontextprotocol.i
 
 ## 📦 Installation
 
+### From Source (Current)
 ```bash
-pip install ast-mcp
+git clone https://github.com/AndEnd-Org/ast-mcp.git
+cd ast-mcp
+pip install -e .
 ```
+
+> 📋 **Note**: PyPI package coming soon! For now, install from source.
 
 ## 🚀 Quick Start
 
-### With Claude Desktop
-
-Add to your Claude Desktop configuration:
-
+### Claude Desktop
+Add to your `claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
     "ast-mcp": {
-      "command": "ast-mcp"
+      "command": "python",
+      "args": ["-m", "ast_grep_mcp.server"],
+      "cwd": "/path/to/ast-mcp"
+    }
+  }
+}
+```
+
+### Continue IDE
+Add to your `config.json`:
+```json
+{
+  "mcpServers": {
+    "ast-mcp": {
+      "command": "python",
+      "args": ["-m", "ast_grep_mcp.server"],
+      "cwd": "/path/to/ast-mcp"
+    }
+  }
+}
+```
+
+### Cursor
+Add to your `cursor_rules` or MCP configuration:
+```json
+{
+  "mcpServers": {
+    "ast-mcp": {
+      "command": "python",
+      "args": ["-m", "ast_grep_mcp.server"],
+      "cwd": "/path/to/ast-mcp"
+    }
+  }
+}
+```
+
+### Windsurf (Codeium)
+Add to your MCP server configuration:
+```json
+{
+  "mcpServers": {
+    "ast-mcp": {
+      "command": "python", 
+      "args": ["-m", "ast_grep_mcp.server"],
+      "cwd": "/path/to/ast-mcp"
     }
   }
 }
 ```
 
 ### Standalone Usage
-
 ```bash
-ast-mcp
+cd ast-mcp
+python -m ast_grep_mcp.server
 ```
 
 ## 🛠️ Available Tools

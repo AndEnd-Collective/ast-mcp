@@ -27,12 +27,12 @@ jobs:
       uses: actions/checkout@v4
       
     - name: Set up Python ${{ env.PYTHON_VERSION }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ env.PYTHON_VERSION }}
         
     - name: Cache pip dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/.cache/pip
         key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
@@ -44,19 +44,12 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y wget curl
         
-    - name: Install ast-grep binary
-      run: |
-        # Install ast-grep for testing
-        curl -L https://github.com/ast-grep/ast-grep/releases/latest/download/ast-grep-x86_64-unknown-linux-gnu.zip -o ast-grep.zip
-        unzip ast-grep.zip
-        sudo mv ast-grep /usr/local/bin/
-        chmod +x /usr/local/bin/ast-grep
-        ast-grep --version
+    # ast-grep is installed via ast-grep-cli Python package in dependencies
         
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -e .
+        pip install -e ".[test]"
         
     - name: Set environment variables
       run: |
@@ -79,12 +72,12 @@ jobs:
       uses: actions/checkout@v4
       
     - name: Set up Python ${{ env.PYTHON_VERSION }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ env.PYTHON_VERSION }}
         
     - name: Cache pip dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/.cache/pip
         key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
@@ -94,12 +87,8 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        curl -L https://github.com/ast-grep/ast-grep/releases/latest/download/ast-grep-x86_64-unknown-linux-gnu.zip -o ast-grep.zip
-        unzip ast-grep.zip
-        sudo mv ast-grep /usr/local/bin/
-        chmod +x /usr/local/bin/ast-grep
         python -m pip install --upgrade pip
-        pip install -e .
+        pip install -e ".[test]"
         
     - name: Set environment variables
       run: |
@@ -156,12 +145,12 @@ jobs:
       uses: actions/checkout@v4
       
     - name: Set up Python ${{ env.PYTHON_VERSION }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ env.PYTHON_VERSION }}
         
     - name: Cache pip dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/.cache/pip
         key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
@@ -171,12 +160,8 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        curl -L https://github.com/ast-grep/ast-grep/releases/latest/download/ast-grep-x86_64-unknown-linux-gnu.zip -o ast-grep.zip
-        unzip ast-grep.zip
-        sudo mv ast-grep /usr/local/bin/
-        chmod +x /usr/local/bin/ast-grep
         python -m pip install --upgrade pip
-        pip install -e .
+        pip install -e ".[test]"
         
     - name: Set environment variables
       run: |
@@ -203,12 +188,12 @@ jobs:
       uses: actions/checkout@v4
       
     - name: Set up Python ${{ env.PYTHON_VERSION }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ env.PYTHON_VERSION }}
         
     - name: Cache pip dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/.cache/pip
         key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
@@ -218,12 +203,8 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        curl -L https://github.com/ast-grep/ast-grep/releases/latest/download/ast-grep-x86_64-unknown-linux-gnu.zip -o ast-grep.zip
-        unzip ast-grep.zip
-        sudo mv ast-grep /usr/local/bin/
-        chmod +x /usr/local/bin/ast-grep
         python -m pip install --upgrade pip
-        pip install -e .
+        pip install -e ".[test]"
         
     - name: Set environment variables
       run: |
@@ -281,12 +262,12 @@ jobs:
       uses: actions/checkout@v4
       
     - name: Set up Python ${{ env.PYTHON_VERSION }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ env.PYTHON_VERSION }}
         
     - name: Cache pip dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/.cache/pip
         key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
@@ -296,12 +277,8 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        curl -L https://github.com/ast-grep/ast-grep/releases/latest/download/ast-grep-x86_64-unknown-linux-gnu.zip -o ast-grep.zip
-        unzip ast-grep.zip
-        sudo mv ast-grep /usr/local/bin/
-        chmod +x /usr/local/bin/ast-grep
         python -m pip install --upgrade pip
-        pip install -e .
+        pip install -e ".[test]"
         pip install psutil  # For performance monitoring
         
     - name: Set environment variables
@@ -328,12 +305,12 @@ jobs:
       uses: actions/checkout@v4
       
     - name: Set up Python ${{ env.PYTHON_VERSION }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ env.PYTHON_VERSION }}
         
     - name: Cache pip dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/.cache/pip
         key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
@@ -343,12 +320,8 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        curl -L https://github.com/ast-grep/ast-grep/releases/latest/download/ast-grep-x86_64-unknown-linux-gnu.zip -o ast-grep.zip
-        unzip ast-grep.zip
-        sudo mv ast-grep /usr/local/bin/
-        chmod +x /usr/local/bin/ast-grep
         python -m pip install --upgrade pip
-        pip install -e .
+        pip install -e ".[test]"
         pip install psutil
         
     - name: Set environment variables
@@ -365,47 +338,22 @@ jobs:
           echo "📊 Validation results generated successfully"
           
           # Extract and display key metrics
-          python3 -c "
-import json
-with open('tests/mcp_validation_results.json', 'r') as f:
-    data = json.load(f)
-    
-print('🎯 MCP Validation Results Summary:')
-total_modules = len([k for k in data.keys() if k.startswith('test_')])
-passing_modules = len([k for k, v in data.items() if k.startswith('test_') and v.get('return_code', 1) == 0])
-
-print(f'✅ Modules Passed: {passing_modules}/{total_modules}')
-
-# Check specific compliance targets
-for module, results in data.items():
-    if module.startswith('test_mcp_'):
-        success_rate = results.get('success_rate', 0)
-        total_tests = results.get('total_tests', 0)
-        passed_tests = results.get('passed_tests', 0)
-        
-        status = '✅' if success_rate >= 90 else '⚠️' if success_rate >= 75 else '❌'
-        print(f'{status} {results.get(\"name\", module)}: {success_rate:.1f}% ({passed_tests}/{total_tests})')
-        
-        # Fail if any critical module is below 85%
-        if 'protocol' in module.lower() or 'integration' in module.lower():
-            if success_rate < 85:
-                print(f'❌ CRITICAL FAILURE: {module} below 85% threshold!')
-                exit(1)
-"
+          echo "📊 Analyzing MCP validation results..."
+          python3 scripts/analyze_validation_results.py tests/mcp_validation_results.json
         else
           echo "❌ Validation results file not found!"
           exit 1
         fi
         
     - name: Upload validation results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: mcp-validation-results
         path: tests/mcp_validation_results.json
         
     - name: Upload test logs
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: test-logs
@@ -425,19 +373,15 @@ for module, results in data.items():
       uses: actions/checkout@v4
       
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
         
     - name: Install dependencies
       run: |
         sudo apt-get update
-        curl -L https://github.com/ast-grep/ast-grep/releases/latest/download/ast-grep-x86_64-unknown-linux-gnu.zip -o ast-grep.zip
-        unzip ast-grep.zip
-        sudo mv ast-grep /usr/local/bin/
-        chmod +x /usr/local/bin/ast-grep
         python -m pip install --upgrade pip
-        pip install -e .
+        pip install -e ".[test]"
         
     - name: Set environment variables
       run: |
@@ -459,7 +403,7 @@ for module, results in data.items():
     
     steps:
     - name: Download validation results
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: mcp-validation-results
         path: results/

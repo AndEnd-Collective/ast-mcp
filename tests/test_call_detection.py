@@ -9,11 +9,15 @@ and complex scenarios.
 import pytest
 import asyncio
 import tempfile
+import sys
 from pathlib import Path
 from unittest.mock import Mock, patch, AsyncMock
 import json
 
-from src.ast_grep_mcp.utils import CallDetector, create_call_detector, ASTGrepExecutor
+# Add src to Python path
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+
+from ast_grep_mcp.utils import CallDetector, create_call_detector, ASTGrepExecutor
 
 
 class TestCallDetector:
