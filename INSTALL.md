@@ -9,7 +9,7 @@ pip install ast-grep-mcp
 
 ### Option 2: Install from GitHub
 ```bash
-pip install git+https://github.com/AndEnd-Org/ast-mcp.git
+pip install git+https://github.com/AndEnd-Collective/ast-mcp.git
 ```
 
 ### Option 3: Install via pipx (Isolated Environment)

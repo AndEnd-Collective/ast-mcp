@@ -84,6 +84,6 @@ jobs:
           - Python 3.8+
           - AST-Grep binary: https://ast-grep.github.io/guide/quick-start.html#installation
           
-          See [INSTALL.md](https://github.com/AndEnd-Org/ast-mcp/blob/main/INSTALL.md) for detailed setup instructions.
+          See [INSTALL.md](https://github.com/AndEnd-Collective/ast-mcp/blob/main/INSTALL.md) for detailed setup instructions.
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

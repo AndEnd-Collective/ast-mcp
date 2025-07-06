@@ -25,7 +25,7 @@ This guide will walk you through everything you need to know to get the most out
 ### 1-Minute Setup
 ```bash
 # Clone and install AST-MCP
-git clone https://github.com/AndEnd-Org/ast-mcp.git
+git clone https://github.com/AndEnd-Collective/ast-mcp.git
 cd ast-mcp
 pip install -e .
 
@@ -69,14 +69,14 @@ Add this to your MCP configuration:
 
 ### Option 1: From Source (Current)
 ```bash
-git clone https://github.com/AndEnd-Org/ast-mcp.git
+git clone https://github.com/AndEnd-Collective/ast-mcp.git
 cd ast-mcp
 pip install -e .
 ```
 
 ### Option 2: Development Setup
 ```bash
-git clone https://github.com/AndEnd-Org/ast-mcp.git
+git clone https://github.com/AndEnd-Collective/ast-mcp.git
 cd ast-mcp
 pip install -e .[dev]  # Includes development tools
 ```
@@ -422,7 +422,7 @@ results = search_code("function.*async", "src/**/*.js")
 
 ## 📞 Getting Help
 
-- **GitHub Issues**: [Report bugs or request features](https://github.com/AndEnd-Org/ast-mcp/issues)
+- **GitHub Issues**: [Report bugs or request features](https://github.com/AndEnd-Collective/ast-mcp/issues)
 - **Documentation**: Check the `/docs` folder for detailed API docs
 - **Examples**: Look at the `/examples` directory for more use cases
 

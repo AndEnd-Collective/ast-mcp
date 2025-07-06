@@ -43,7 +43,7 @@ A production-ready [Model Context Protocol (MCP)](https://modelcontextprotocol.i
 
 ### From Source (Current)
 ```bash
-git clone https://github.com/AndEnd-Org/ast-mcp.git
+git clone https://github.com/AndEnd-Collective/ast-mcp.git
 cd ast-mcp
 pip install -e .
 ```

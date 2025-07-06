@@ -9,10 +9,10 @@ description = "Production-ready MCP Server for AST-Grep with 25+ code quality ru
 readme = "README.md"
 license = {text = "MIT"}
 authors = [
-    {name = "AndEnd-Org", email = "contact@andend.org"}
+    {name = "AndEnd-Collective", email = "contact@andend.org"}
 ]
 maintainers = [
-    {name = "AndEnd-Org", email = "contact@andend.org"}
+    {name = "AndEnd-Collective", email = "contact@andend.org"}
 ]
 keywords = ["ast-grep", "mcp", "code-analysis", "semantic-search", "static-analysis"]
 classifiers = [
@@ -62,9 +62,9 @@ test = [
 
 [project.urls]
 "Homepage" = "https://andend.io"
-"Bug Tracker" = "https://github.com/AndEnd-Org/ast-mcp/issues"
-"Repository" = "https://github.com/AndEnd-Org/ast-mcp"
-"Documentation" = "https://github.com/AndEnd-Org/ast-mcp#readme"
+"Bug Tracker" = "https://github.com/AndEnd-Collective/ast-mcp/issues"
+"Repository" = "https://github.com/AndEnd-Collective/ast-mcp"
+"Documentation" = "https://github.com/AndEnd-Collective/ast-mcp#readme"
 
 [project.scripts]
 ast-mcp = "ast_grep_mcp.server:main_sync"
