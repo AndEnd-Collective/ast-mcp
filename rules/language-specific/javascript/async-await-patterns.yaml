@@ -1,0 +1,79 @@
+---
+# JavaScript/TypeScript Async/Await Pattern Detection
+metadata:
+  version: "1.0.0"
+  author: "AndEnd Team"
+  description: "Detects async/await patterns, anti-patterns, and optimization opportunities"
+  creation_date: "2025-07-06"
+  last_edit_date: "2025-07-06"
+
+rule:
+  id: async-await-patterns
+  language: TypeScript
+  rule:
+    any:
+      # Sequential awaits that could be parallel
+      - pattern: |
+          const $VAR1 = await $ASYNC1;
+          const $VAR2 = await $ASYNC2;
+        where:
+          independent: true
+      # Missing error handling in async functions
+      - pattern: |
+          async function $NAME($$$PARAMS) {
+            await $ASYNC_CALL;
+            $$$REST
+          }
+        not:
+          has:
+            any:
+              - pattern: "try"
+              - pattern: ".catch"
+      # Promise.all opportunities
+      - pattern: |
+          await $ASYNC1;
+          await $ASYNC2;
+          await $ASYNC3;
+      # Async function in loops (potential performance issue)
+      - pattern: |
+          for ($INIT; $CONDITION; $UPDATE) {
+            await $ASYNC_CALL;
+          }
+
+documentation:
+  reasoning: |
+    Async/await pattern analysis helps LLMs:
+    1. Identify performance optimization opportunities
+    2. Detect error handling gaps
+    3. Suggest parallel execution patterns
+    4. Prevent common async anti-patterns
+
+  value_proposition: |
+    - Optimizes async code performance automatically
+    - Ensures proper error handling in async flows
+    - Identifies parallelization opportunities
+    - Prevents common async mistakes
+
+  example_usecase: |
+    **Scenario**: LLM optimizing application performance by improving async patterns
+    
+    **Problem**: Sequential awaits causing unnecessary delays
+    
+    **Solution**: Use this rule to:
+    1. Find sequential awaits that can be parallelized
+    2. Identify missing error handling
+    3. Detect performance bottlenecks
+    4. Suggest Promise.all optimizations
+    
+    **Command**: 
+    ```bash
+    ast-grep --config rules/language-specific/javascript/async-await-patterns.yaml src/ --json | jq '.[] | {optimization_type: .rule_id, file: .file, line: .start_line}'
+    ```
+    
+    **Result**: Performance optimization opportunities with specific suggestions
+
+  llm_assistance_benefits:
+    - "Automatically identifies async performance bottlenecks"
+    - "Suggests specific parallelization opportunities"
+    - "Ensures robust async error handling"
+    - "Prevents common async anti-patterns"

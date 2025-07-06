@@ -1,0 +1,78 @@
+---
+# Extract Method Refactoring Candidate Detection
+metadata:
+  version: "1.0.0"
+  author: "AndEnd Team"
+  description: "Identifies code blocks that are good candidates for method extraction"
+  creation_date: "2025-07-06"
+  last_edit_date: "2025-07-06"
+
+rule:
+  id: extract-method-candidates
+  language: TypeScript
+  rule:
+    any:
+      # Long function bodies (placeholder for line count logic)
+      - pattern: |
+          function $NAME($$$PARAMS) {
+            $$$BODY
+          }
+        where:
+          body:
+            length: ">20"  # Functions longer than 20 statements
+      # Repeated code blocks
+      - pattern: |
+          {
+            $STMT1;
+            $STMT2;
+            $STMT3;
+            $$$REST
+          }
+        where:
+          occurs: ">1"  # Code block appears more than once
+      # Complex conditional logic
+      - pattern: |
+          if ($COMPLEX_COND) {
+            $$$COMPLEX_BODY
+          }
+        where:
+          complex_cond:
+            operators: ">3"  # More than 3 logical operators
+
+documentation:
+  reasoning: |
+    Extract method refactoring detection helps LLMs:
+    1. Identify code duplication
+    2. Suggest function decomposition
+    3. Improve code maintainability
+    4. Reduce cognitive complexity
+
+  value_proposition: |
+    - Automated detection of refactoring opportunities
+    - Objective criteria for method extraction
+    - Improves code organization systematically
+    - Reduces maintenance burden
+
+  example_usecase: |
+    **Scenario**: LLM planning refactoring of a large legacy function
+    
+    **Problem**: Hard to identify where to split the function logically
+    
+    **Solution**: Use this rule to:
+    1. Identify natural extraction boundaries
+    2. Find repeated logic patterns
+    3. Suggest logical function splits
+    4. Maintain code cohesion
+    
+    **Command**: 
+    ```bash
+    ast-grep --config rules/use-cases/refactoring/extract-method-candidates.yaml src/legacy-module.ts
+    ```
+    
+    **Result**: Prioritized list of extraction opportunities with reasoning
+
+  llm_assistance_benefits:
+    - "Provides systematic refactoring guidance"
+    - "Identifies code duplication automatically"
+    - "Suggests logical function boundaries"
+    - "Improves code maintainability"

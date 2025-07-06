@@ -1,0 +1,81 @@
+---
+# Progress Tracking Markers for LLM Analysis
+metadata:
+  version: "1.0.0"
+  author: "AndEnd Team"
+  description: "Identifies code markers and patterns that help LLMs track analysis progress"
+  creation_date: "2025-07-06"
+  last_edit_date: "2025-07-06"
+
+rule:
+  id: progress-tracking
+  language: TypeScript
+  rule:
+    any:
+      # Analysis checkpoint comments
+      - pattern: "// @checkpoint: $DESCRIPTION"
+      - pattern: "/* @progress: $STATUS */"
+      # Completion markers
+      - pattern: "// TODO: $TASK"
+      - pattern: "// FIXME: $ISSUE"
+      - pattern: "// DONE: $COMPLETED"
+      # Analysis sections
+      - pattern: |
+          // @section: $SECTION_NAME
+          $$$SECTION_CODE
+          // @end-section
+      # Milestone markers
+      - pattern: "// @milestone: $MILESTONE ($DATE)"
+
+documentation:
+  reasoning: |
+    Progress tracking helps LLMs:
+    1. Resume analysis where they left off
+    2. Avoid re-analyzing completed sections
+    3. Track understanding progression
+    4. Maintain context between sessions
+
+  value_proposition: |
+    - Enables analysis resumption and continuation
+    - Prevents redundant re-analysis
+    - Tracks understanding progression
+    - Maintains context across sessions
+
+  example_usecase: |
+    **Scenario**: LLM needs to resume complex analysis after interruption
+    
+    **Problem**: Without progress markers, LLM restarts analysis from beginning
+    
+    **Solution**: Use this rule to:
+    1. Find existing progress markers
+    2. Identify completed analysis sections
+    3. Resume from last checkpoint
+    4. Track new progress with markers
+    
+    **Command**: 
+    ```bash
+    ast-grep --config rules/use-cases/llm-assistance/progress-tracking.yaml src/ --json | jq '.[] | {marker_type: .rule_id, file: .file, status: .matches[].meta_vars.STATUS // .matches[].meta_vars.DESCRIPTION}'
+    ```
+    
+    **Result**: Complete progress map for efficient analysis resumption
+
+  llm_assistance_benefits:
+    - "Enables efficient analysis resumption"
+    - "Prevents redundant work"
+    - "Tracks understanding progression"
+    - "Maintains context across sessions"
+
+  tracking_patterns:
+    checkpoint_strategy: |
+      For long analysis sessions:
+      1. Create checkpoints at major understanding milestones
+      2. Mark completed analysis sections
+      3. Note pending questions or issues
+      4. Update status as analysis progresses
+    
+    resumption_protocol: |
+      When resuming analysis:
+      1. Scan for existing progress markers
+      2. Review completed sections briefly
+      3. Identify last checkpoint location
+      4. Continue from where analysis stopped

@@ -1,0 +1,68 @@
+---
+# Rename Safety Check Rule
+metadata:
+  version: "1.0.0"
+  author: "AndEnd Team"
+  description: "Validates safety of variable/function renames by checking scope and usage"
+  creation_date: "2025-07-06"
+  last_edit_date: "2025-07-06"
+
+rule:
+  id: rename-safety-check
+  language: TypeScript
+  rule:
+    any:
+      # Variable usage patterns
+      - pattern: "$TARGET_NAME"
+        context:
+          scope: "function"
+      # Property access patterns
+      - pattern: "$OBJ.$TARGET_NAME"
+      # Method call patterns
+      - pattern: "$TARGET_NAME($$$ARGS)"
+      # Destructuring patterns
+      - pattern: "{ $TARGET_NAME } = $SOURCE"
+      # Export/import usage
+      - pattern: "export { $TARGET_NAME }"
+
+constraints:
+  - pattern: "$TARGET_NAME"
+    not_regex: "^(constructor|prototype|__.*__)$"  # Avoid system names
+
+documentation:
+  reasoning: |
+    Rename safety checking prevents LLMs from:
+    1. Breaking code during refactoring
+    2. Missing usage in different scopes
+    3. Conflicting with reserved names
+    4. Introducing naming inconsistencies
+
+  value_proposition: |
+    - Prevents refactoring-related breakage
+    - Ensures comprehensive rename coverage
+    - Validates scope safety
+    - Maintains code consistency
+
+  example_usecase: |
+    **Scenario**: LLM wants to rename a variable but needs to ensure it's safe
+    
+    **Problem**: Text-based rename might miss subtle usage patterns or scope conflicts
+    
+    **Solution**: Use this rule to:
+    1. Find all usages of the target name
+    2. Check for scope conflicts
+    3. Validate rename safety
+    4. Ensure complete coverage
+    
+    **Command**: 
+    ```bash
+    ast-grep --config rules/use-cases/refactoring/rename-safety-check.yaml -A TARGET_NAME=oldVariableName src/
+    ```
+    
+    **Result**: Complete usage map to ensure safe renaming
+
+  llm_assistance_benefits:
+    - "Prevents code breakage during rename operations"
+    - "Ensures comprehensive rename coverage"
+    - "Validates scope and context safety"
+    - "Maintains code consistency"

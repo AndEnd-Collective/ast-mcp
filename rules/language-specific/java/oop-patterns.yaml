@@ -1,0 +1,91 @@
+---
+# Java OOP Pattern Detection
+metadata:
+  version: "1.0.0"
+  author: "AndEnd Team"
+  description: "Detects Java object-oriented programming patterns and design principles"
+  creation_date: "2025-07-06"
+  last_edit_date: "2025-07-06"
+
+rule:
+  id: java-oop-patterns
+  language: Java
+  rule:
+    any:
+      # Class definitions
+      - pattern: |
+          public class $CLASS {
+            $$$BODY
+          }
+      - pattern: |
+          public abstract class $CLASS {
+            $$$BODY
+          }
+      # Interface definitions
+      - pattern: |
+          public interface $INTERFACE {
+            $$$BODY
+          }
+      # Inheritance
+      - pattern: "public class $CLASS extends $PARENT"
+      - pattern: "public class $CLASS implements $INTERFACE"
+      # Method overriding
+      - pattern: |
+          @Override
+          public $TYPE $METHOD($$$PARAMS) {
+            $$$BODY
+          }
+      # Static methods and fields
+      - pattern: "public static $TYPE $FIELD"
+      - pattern: "public static $TYPE $METHOD($$$PARAMS)"
+      # Constructor patterns
+      - pattern: |
+          public $CLASS($$$PARAMS) {
+            $$$BODY
+          }
+      # Getters and setters
+      - pattern: |
+          public $TYPE get$PROPERTY() {
+            return $FIELD;
+          }
+      - pattern: |
+          public void set$PROPERTY($TYPE $PARAM) {
+            this.$FIELD = $PARAM;
+          }
+      # Builder pattern
+      - pattern: |
+          public static class Builder {
+            $$$BODY
+          }
+      # Singleton pattern
+      - pattern: |
+          private static $CLASS instance;
+          public static $CLASS getInstance() {
+            $$$BODY
+          }
+
+  severity: medium
+  message: "Java OOP pattern detected - ensure proper encapsulation and design principles"
+  
+  best_practices:
+    - "Use proper access modifiers (private, protected, public)"
+    - "Follow single responsibility principle"
+    - "Prefer composition over inheritance"
+    - "Use interfaces for contracts"
+    - "Implement proper equals() and hashCode() methods"
+    
+  examples:
+    good:
+      - |
+        public class Person {
+            private String name;
+            private int age;
+            
+            public Person(String name, int age) {
+                this.name = name;
+                this.age = age;
+            }
+            
+            public String getName() { return name; }
+            public int getAge() { return age; }
+        }

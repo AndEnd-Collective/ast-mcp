@@ -1,0 +1,95 @@
+---
+# Context Switching Detection for LLM Focus Management
+metadata:
+  version: "1.0.0"
+  author: "AndEnd Team"
+  description: "Identifies context switches to help LLMs maintain focus and avoid confusion"
+  creation_date: "2025-07-06"
+  last_edit_date: "2025-07-06"
+
+rule:
+  id: context-switching
+  language: TypeScript
+  rule:
+    any:
+      # Different abstraction levels in same function
+      - pattern: |
+          function $NAME($$$PARAMS) {
+            $LOW_LEVEL;
+            $$$MIDDLE
+            $HIGH_LEVEL;
+          }
+        where:
+          low_level: "pointer|memory|buffer|raw"
+          high_level: "strategy|policy|business|domain"
+      # Mixed concerns in single file
+      - pattern: |
+          class $UI_CLASS {
+            $$$UI_METHODS
+          }
+          class $DATA_CLASS {
+            $$$DATA_METHODS  
+          }
+        where:
+          ui_class: "Component|View|Widget|UI"
+          data_class: "Model|Entity|Repository|Service"
+      # Cross-cutting concerns
+      - pattern: |
+          function $NAME($$$PARAMS) {
+            $LOGGING;
+            $BUSINESS_LOGIC;
+            $CACHING;
+          }
+
+documentation:
+  reasoning: |
+    Context switching detection helps LLMs:
+    1. Maintain analytical focus
+    2. Avoid mixing abstraction levels
+    3. Identify separation of concerns issues
+    4. Prevent mental model confusion
+
+  value_proposition: |
+    - Maintains LLM focus through context awareness
+    - Identifies architectural issues
+    - Prevents analysis confusion
+    - Enables cleaner mental models
+
+  example_usecase: |
+    **Scenario**: LLM analyzing complex code mixing multiple concerns
+    
+    **Problem**: LLM gets confused jumping between different abstraction levels
+    
+    **Solution**: Use this rule to:
+    1. Identify context switches within functions
+    2. Separate analysis by concern
+    3. Maintain focus on single abstraction level
+    4. Plan refactoring to reduce context switching
+    
+    **Command**: 
+    ```bash
+    ast-grep --config rules/use-cases/llm-assistance/context-switching.yaml src/ --json | jq '.[] | {file: .file, context_switch_type: .rule_id, function: .matches[].meta_vars.NAME}'
+    ```
+    
+    **Result**: Map of context switches for focused analysis planning
+
+  llm_assistance_benefits:
+    - "Prevents analysis confusion through context awareness"
+    - "Maintains focus on single abstraction level"
+    - "Identifies separation of concerns violations"
+    - "Guides architectural improvements"
+
+  focus_strategies:
+    single_concern_analysis: |
+      When analyzing mixed-concern code:
+      1. Use rule to identify context switches
+      2. Extract each concern separately
+      3. Analyze one concern at a time
+      4. Recombine understanding at end
+    
+    abstraction_level_consistency: |
+      For maintaining mental models:
+      1. Identify abstraction level switches
+      2. Group similar abstraction levels
+      3. Analyze from high-level to low-level
+      4. Avoid jumping between levels

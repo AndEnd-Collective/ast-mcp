@@ -1,0 +1,94 @@
+---
+# AI Code Hallucination Detection
+metadata:
+  version: "1.0.0"
+  author: "AndEnd Team"
+  description: "Detects potential AI hallucinations - non-existent functions, libraries, or APIs"
+  creation_date: "2025-07-06"
+  last_edit_date: "2025-07-06"
+  use_case: "Preventing AI-generated code with non-existent dependencies"
+
+rule:
+  id: ai-hallucination-detection
+  language: Any
+  rule:
+    any:
+      # Suspicious function calls that might be hallucinated
+      - pattern: "use$HOOK($$$ARGS)" # React hooks like useMetadata, useCustom
+      - pattern: "$OBJ.magical$METHOD($$$ARGS)" # Methods with "magical" prefixes
+      - pattern: "$OBJ.auto$METHOD($$$ARGS)" # Auto-prefixed methods
+      - pattern: "import { $NAME } from '$LIB'" # Check against known libraries
+      - pattern: "from $LIB import $NAME" # Python imports
+      - pattern: "#include <$HEADER>" # C++ headers
+      
+      # Suspicious library/package names
+      - pattern: "import $LIB-magic"
+      - pattern: "import $LIB-auto"
+      - pattern: "import $LIB-helper"
+      - pattern: "import super-$LIB"
+      
+      # Common AI hallucinated React patterns
+      - pattern: "useMetadata($$$ARGS)"
+      - pattern: "useAutoUpdate($$$ARGS)"
+      - pattern: "useMagicState($$$ARGS)"
+      - pattern: "useSmartEffect($$$ARGS)"
+      
+      # Suspicious Python library calls
+      - pattern: "requests.auto_get($$$ARGS)"
+      - pattern: "pandas.smart_read($$$ARGS)"
+      - pattern: "numpy.magic_array($$$ARGS)"
+      
+      # Generic "too good to be true" patterns
+      - pattern: "$OBJ.solve($$$ARGS)"
+      - pattern: "$OBJ.optimizeAutomatically($$$ARGS)"
+      - pattern: "$OBJ.handleAllCases($$$ARGS)"
+
+  severity: critical
+  message: "Potential AI hallucination detected - verify this function/library exists before using"
+  
+  validation_steps:
+    - "Check official documentation for the library/framework"
+    - "Verify the function exists in the latest version"
+    - "Search for usage examples in reputable repositories"
+    - "Test the import/include statement"
+    - "Check if this is a deprecated or removed API"
+    
+  common_hallucinations:
+    react:
+      - "useMetadata() - doesn't exist in React"
+      - "useAutoUpdate() - not a real hook"
+      - "React.autoRender() - not a real method"
+    python:
+      - "requests.auto_get() - not in requests library"
+      - "pandas.smart_read() - not a real method"
+      - "os.magic_path() - doesn't exist"
+    javascript:
+      - "Array.prototype.smartFilter() - not a real method"
+      - "String.prototype.magicSplit() - doesn't exist"
+      - "JSON.autoparse() - not a real method"
+      
+  examples:
+    suspicious:
+      - |
+        // Likely AI hallucination - useMetadata doesn't exist
+        import { useMetadata, useAutoUpdate } from 'react';
+        
+        function Component() {
+          const meta = useMetadata(); // ❌ This will cause runtime error
+          useAutoUpdate(); // ❌ This doesn't exist
+        }
+    verified:
+      - |
+        // Actual React hooks that exist
+        import { useState, useEffect } from 'react';
+        
+        function Component() {
+          const [data, setData] = useState(null); // ✅ Real hook
+          useEffect(() => {}, []); // ✅ Real hook
+        }
+        
+  fix_suggestions:
+    - "Replace hallucinated functions with actual API calls"
+    - "Use well-established libraries and their documented methods"
+    - "Check function signatures against official documentation"
+    - "Implement the functionality using existing, verified APIs"

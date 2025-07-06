@@ -1,0 +1,65 @@
+---
+# C++ Memory Management Pattern Detection
+metadata:
+  version: "1.0.0"
+  author: "AndEnd Team"
+  description: "Detects C++ memory management patterns, potential leaks, and modern C++ practices"
+  creation_date: "2025-07-06"
+  last_edit_date: "2025-07-06"
+
+rule:
+  id: cpp-memory-management
+  language: C++
+  rule:
+    any:
+      # Raw pointer allocations without corresponding delete
+      - pattern: "$TYPE* $VAR = new $TYPE($$$ARGS)"
+      # Array allocations
+      - pattern: "$TYPE* $VAR = new $TYPE[$SIZE]"
+      # Manual memory management
+      - pattern: "delete $VAR"
+      - pattern: "delete[] $VAR"
+      # Smart pointer usage (good practice)
+      - pattern: "std::unique_ptr<$TYPE> $VAR"
+      - pattern: "std::shared_ptr<$TYPE> $VAR"
+      - pattern: "std::weak_ptr<$TYPE> $VAR"
+      # RAII patterns
+      - pattern: |
+          class $CLASS {
+          public:
+            $CLASS($$$PARAMS) { $$$BODY }
+            ~$CLASS() { $$$BODY }
+          }
+      # Move semantics
+      - pattern: "std::move($VAR)"
+      - pattern: "$TYPE&& $VAR"
+      # Memory allocation functions
+      - pattern: "malloc($SIZE)"
+      - pattern: "calloc($NUM, $SIZE)"
+      - pattern: "realloc($PTR, $SIZE)"
+      - pattern: "free($PTR)"
+
+  severity: high
+  message: "C++ memory management pattern detected - ensure proper RAII, use smart pointers, and avoid memory leaks"
+  
+  fix:
+    - "Use std::unique_ptr or std::shared_ptr instead of raw pointers"
+    - "Follow RAII principles - acquire resources in constructor, release in destructor"
+    - "Use std::vector instead of raw arrays"
+    - "Prefer stack allocation over heap allocation when possible"
+    
+  examples:
+    bad:
+      - |
+        int* ptr = new int(42);
+        // Missing delete - memory leak
+      - |
+        char* buffer = malloc(1024);
+        // Missing free - memory leak
+    good:
+      - |
+        std::unique_ptr<int> ptr = std::make_unique<int>(42);
+        // Automatic cleanup
+      - |
+        std::vector<int> buffer(1024);
+        // Automatic memory management

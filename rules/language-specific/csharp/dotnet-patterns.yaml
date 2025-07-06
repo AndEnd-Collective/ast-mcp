@@ -1,0 +1,83 @@
+---
+# C# .NET Pattern Detection
+metadata:
+  version: "1.0.0"
+  author: "AndEnd Team"
+  description: "Detects C# .NET patterns, LINQ usage, async/await, and modern C# features"
+  creation_date: "2025-07-06"
+  last_edit_date: "2025-07-06"
+
+rule:
+  id: csharp-dotnet-patterns
+  language: C#
+  rule:
+    any:
+      # Async/await patterns
+      - pattern: "async Task $METHOD($$$PARAMS)"
+      - pattern: "async Task<$TYPE> $METHOD($$$PARAMS)"
+      - pattern: "await $EXPRESSION"
+      # LINQ expressions
+      - pattern: "$COLLECTION.Where($$$ARGS)"
+      - pattern: "$COLLECTION.Select($$$ARGS)"
+      - pattern: "$COLLECTION.OrderBy($$$ARGS)"
+      - pattern: "$COLLECTION.GroupBy($$$ARGS)"
+      - pattern: "$COLLECTION.FirstOrDefault($$$ARGS)"
+      # Property patterns
+      - pattern: |
+          public $TYPE $PROPERTY { get; set; }
+      - pattern: |
+          public $TYPE $PROPERTY { get; private set; }
+      # Null checking patterns
+      - pattern: "$VAR?.$$MEMBER"
+      - pattern: "$VAR ?? $DEFAULT"
+      - pattern: "$VAR ??= $DEFAULT"
+      # Using statements
+      - pattern: |
+          using ($RESOURCE) {
+            $$$BODY
+          }
+      - pattern: "using var $VAR = $EXPRESSION"
+      # Exception handling
+      - pattern: |
+          try {
+            $$$BODY
+          } catch ($EXCEPTION $VAR) when ($CONDITION) {
+            $$$HANDLER
+          }
+      # Delegates and events
+      - pattern: "event $DELEGATE $EVENT"
+      - pattern: "$EVENT += $HANDLER"
+      - pattern: "$EVENT -= $HANDLER"
+      # Generic constraints
+      - pattern: "where $T : $CONSTRAINT"
+
+  severity: medium
+  message: "C# .NET pattern detected - ensure modern practices and proper async handling"
+  
+  best_practices:
+    - "Use async/await instead of Task.Result or Task.Wait()"
+    - "Use ConfigureAwait(false) in library code"
+    - "Prefer LINQ over manual loops where appropriate"
+    - "Use null-conditional operators for safe navigation"
+    - "Implement IDisposable for resource management"
+    
+  examples:
+    modern:
+      - |
+        public async Task<List<User>> GetUsersAsync()
+        {
+            var users = await _repository.GetAllAsync();
+            return users.Where(u => u.IsActive).ToList();
+        }
+    legacy:
+      - |
+        public List<User> GetUsers()
+        {
+            var allUsers = _repository.GetAll().Result; // Blocking
+            var activeUsers = new List<User>();
+            foreach (var user in allUsers)
+            {
+                if (user.IsActive) activeUsers.Add(user);
+            }
+            return activeUsers;
+        }

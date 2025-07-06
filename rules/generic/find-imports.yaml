@@ -1,0 +1,63 @@
+---
+# Generic Import/Dependency Detection Rule
+metadata:
+  version: "1.0.0"
+  author: "AndEnd Team"
+  description: "Detects import statements and module dependencies"
+  creation_date: "2025-07-06"
+  last_edit_date: "2025-07-06"
+
+rule:
+  id: find-imports
+  language: TypeScript
+  rule:
+    any:
+      - pattern: "import $SPEC from '$MODULE'"
+      - pattern: "import { $IMPORTS } from '$MODULE'"
+      - pattern: "import * as $ALIAS from '$MODULE'"
+      - pattern: "import '$MODULE'"  # Side-effect import
+      - pattern: "const $NAME = require('$MODULE')"  # CommonJS
+      - pattern: "import type { $TYPES } from '$MODULE'"  # Type import
+
+constraints:
+  - pattern: "$MODULE"
+    regex: "^[^'\"]+$"
+
+documentation:
+  reasoning: |
+    Import analysis is crucial for:
+    1. Dependency mapping
+    2. Circular dependency detection
+    3. Bundle analysis
+    4. Refactoring impact assessment
+    5. Module boundary understanding
+
+  value_proposition: |
+    - Accurate dependency graph construction
+    - Enables safe module refactoring
+    - Detects unused imports automatically
+    - Critical for large-scale code organization
+
+  example_usecase: |
+    **Scenario**: LLM planning a major refactoring that might break import dependencies
+    
+    **Problem**: Manual dependency tracking is error-prone and incomplete
+    
+    **Solution**: Use this rule to:
+    1. Map complete dependency graph
+    2. Identify circular dependencies
+    3. Plan refactoring order
+    4. Ensure no broken imports
+    
+    **Command**: 
+    ```bash
+    ast-grep --config rules/generic/find-imports.yaml src/ | jq '.[] | .matches[].meta_vars.MODULE'
+    ```
+    
+    **Result**: Complete dependency map for strategic refactoring planning
+
+  llm_assistance_benefits:
+    - "Eliminates surprise dependency breaks during refactoring"
+    - "Enables dependency-aware code generation"
+    - "Provides module boundary clarity"
+    - "Prevents circular dependency introduction"

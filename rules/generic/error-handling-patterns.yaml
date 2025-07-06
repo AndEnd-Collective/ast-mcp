@@ -1,0 +1,78 @@
+---
+# Error Handling Pattern Detection Rule
+metadata:
+  version: "1.0.0"
+  author: "AndEnd Team"
+  description: "Detects error handling patterns and potential issues"
+  creation_date: "2025-07-06"
+  last_edit_date: "2025-07-06"
+
+rule:
+  id: error-handling-patterns
+  language: TypeScript
+  rule:
+    any:
+      # Try-catch blocks
+      - pattern: |
+          try {
+            $$$TRY_BODY
+          } catch ($ERROR) {
+            $$$CATCH_BODY
+          }
+      # Async functions without error handling
+      - pattern: |
+          async function $NAME($$$PARAMS) {
+            $$$BODY
+          }
+        not:
+          has:
+            pattern: "try"
+      # Promise chains without catch
+      - pattern: "$PROMISE.then($HANDLER)"
+        not:
+          has:
+            pattern: ".catch"
+      # Empty catch blocks
+      - pattern: |
+          try {
+            $$$TRY_BODY
+          } catch ($ERROR) {
+          }
+
+documentation:
+  reasoning: |
+    Error handling analysis enables LLMs to:
+    1. Identify reliability risks
+    2. Suggest proper error handling
+    3. Improve code robustness
+    4. Guide defensive programming practices
+
+  value_proposition: |
+    - Systematic error handling assessment
+    - Prevents production failures
+    - Improves code reliability
+    - Enables proactive error management
+
+  example_usecase: |
+    **Scenario**: LLM reviewing code for production readiness
+    
+    **Problem**: Missing error handling can cause production failures
+    
+    **Solution**: Use this rule to:
+    1. Identify unhandled error scenarios
+    2. Suggest appropriate error handling patterns
+    3. Ensure consistent error management
+    4. Improve application reliability
+    
+    **Command**: 
+    ```bash
+    ast-grep --config rules/generic/error-handling-patterns.yaml src/ --json | jq '.[] | select(.rule_id == "async-without-error-handling")'
+    ```
+    
+    **Result**: List of async functions needing error handling
+
+  llm_assistance_benefits:
+    - "Prevents production failures through proactive error detection"
+    - "Enables systematic error handling improvements"
+    - "Guides defensive programming practices"
+    - "Improves application reliability"

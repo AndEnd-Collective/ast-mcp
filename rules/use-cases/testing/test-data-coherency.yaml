@@ -1,0 +1,87 @@
+---
+# Test Data Coherency Validation Rule
+metadata:
+  version: "1.0.0"
+  author: "AndEnd Team"
+  description: "Validates coherency and consistency of test data across test cases"
+  creation_date: "2025-07-06"
+  last_edit_date: "2025-07-06"
+
+rule:
+  id: test-data-coherency
+  language: TypeScript
+  rule:
+    any:
+      # Inconsistent test data setup
+      - pattern: |
+          const testUser = {
+            id: $ID1,
+            name: '$NAME1'
+          }
+        followed_by:
+          pattern: |
+            const testUser = {
+              id: $ID2,
+              name: '$NAME2'
+            }
+        where:
+          id1_not_equal_id2: true
+      # Magic numbers in tests
+      - pattern: |
+          expect($RESULT).toBe($MAGIC_NUMBER)
+        where:
+          magic_number:
+            not_in: [0, 1, -1, true, false, null, undefined]
+      # Hardcoded dates that may become stale
+      - pattern: "new Date('$HARDCODED_DATE')"
+        where:
+          hardcoded_date:
+            format: "YYYY-MM-DD"
+      # Inconsistent mock data
+      - pattern: |
+          jest.mock('$MODULE', () => ({
+            $METHOD: jest.fn().mockReturnValue($VALUE1)
+          }))
+        followed_by:
+          pattern: |
+            jest.mock('$MODULE', () => ({
+              $METHOD: jest.fn().mockReturnValue($VALUE2)
+            }))
+
+documentation:
+  reasoning: |
+    Test data coherency validation helps LLMs:
+    1. Ensure consistent test data across cases
+    2. Identify brittle test patterns
+    3. Validate test data relationships
+    4. Maintain test suite reliability
+
+  value_proposition: |
+    - Prevents flaky tests through data consistency
+    - Identifies brittle test patterns
+    - Ensures realistic test scenarios
+    - Maintains test suite reliability
+
+  example_usecase: |
+    **Scenario**: LLM investigating flaky test failures in CI
+    
+    **Problem**: Tests pass locally but fail in CI due to inconsistent test data
+    
+    **Solution**: Use this rule to:
+    1. Identify inconsistent test data patterns
+    2. Find hardcoded values that may vary
+    3. Validate mock data consistency
+    4. Ensure test data coherency
+    
+    **Command**: 
+    ```bash
+    ast-grep --config rules/use-cases/testing/test-data-coherency.yaml test/ --json | jq '.[] | {coherency_issue: .rule_id, file: .file, details: .matches[].meta_vars}'
+    ```
+    
+    **Result**: Complete test data coherency analysis with specific issues identified
+
+  llm_assistance_benefits:
+    - "Prevents flaky tests through data validation"
+    - "Identifies brittle test patterns"
+    - "Ensures test data consistency"
+    - "Improves test suite reliability"

@@ -1,0 +1,89 @@
+---
+# Analysis Boundary Detection for LLM Loop Prevention
+metadata:
+  version: "1.0.0"
+  author: "AndEnd Team"
+  description: "Provides clear analysis boundaries to prevent LLM infinite analysis loops"
+  creation_date: "2025-07-06"
+  last_edit_date: "2025-07-06"
+
+rule:
+  id: analysis-boundaries
+  language: TypeScript
+  rule:
+    any:
+      # Module boundaries
+      - pattern: |
+          export {
+            $$$EXPORTS
+          }
+      # Class boundaries
+      - pattern: |
+          class $NAME {
+            $$$MEMBERS
+          }
+      # Function boundaries with complexity indicators
+      - pattern: |
+          function $NAME($$$PARAMS) {
+            $$$BODY
+          }
+        meta:
+          complexity_level: "high"
+          analysis_priority: 1
+      # File-level boundaries
+      - pattern: |
+          // @analysis-boundary: $DESCRIPTION
+          $$$CODE
+
+documentation:
+  reasoning: |
+    Analysis boundaries help LLMs:
+    1. Break large problems into manageable chunks
+    2. Prevent analysis paralysis
+    3. Provide systematic exploration paths
+    4. Create concrete stopping points
+
+  value_proposition: |
+    - Eliminates LLM analysis loops through structured boundaries
+    - Provides systematic code exploration methodology
+    - Enables incremental understanding building
+    - Reduces cognitive load through chunking
+
+  example_usecase: |
+    **Scenario**: LLM stuck in analysis loop on large codebase
+    
+    **Problem**: LLM keeps re-analyzing same code without making progress
+    
+    **Solution**: Use this rule to:
+    1. Identify natural analysis boundaries
+    2. Create systematic exploration plan
+    3. Process code in digestible chunks
+    4. Track analysis progress
+    
+    **Command**: 
+    ```bash
+    ast-grep --config rules/use-cases/llm-assistance/analysis-boundaries.yaml src/ --json | jq '.[] | {boundary_type: .rule_id, file: .file, name: .matches[].meta_vars.NAME, priority: .matches[].meta.analysis_priority}'
+    ```
+    
+    **Result**: Structured analysis roadmap with clear boundaries and priorities
+
+  llm_assistance_benefits:
+    - "Breaks analysis paralysis through concrete boundaries"
+    - "Provides systematic exploration methodology"
+    - "Prevents infinite analysis loops"
+    - "Enables progress tracking and resumption"
+
+  usage_patterns:
+    breaking_loops: |
+      When LLM is stuck in analysis loop:
+      1. Use this rule to find module/class boundaries
+      2. Analyze one boundary at a time
+      3. Build understanding incrementally
+      4. Move to next boundary only when current is complete
+    
+    systematic_exploration: |
+      For new codebase exploration:
+      1. Start with export boundaries (public API)
+      2. Move to class boundaries (main abstractions)
+      3. Drill into function boundaries (implementation details)
+      4. Track completed boundaries to avoid revisiting

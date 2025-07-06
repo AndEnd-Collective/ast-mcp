@@ -1,0 +1,82 @@
+---
+# TypeScript Pattern Detection
+metadata:
+  version: "1.0.0"
+  author: "AndEnd Team"
+  description: "Detects TypeScript-specific patterns, type safety issues, and improvements"
+  creation_date: "2025-07-06"
+  last_edit_date: "2025-07-06"
+
+rule:
+  id: typescript-patterns
+  language: TypeScript
+  rule:
+    any:
+      # Any type usage (type safety issue)
+      - pattern: "const $VAR: any = $VALUE"
+      - pattern: "function $NAME($PARAM: any): any { $$$BODY }"
+      # Missing return type annotations
+      - pattern: |
+          function $NAME($$$PARAMS) {
+            $$$BODY
+            return $RETURN_VALUE;
+          }
+        not:
+          has:
+            pattern: "function $NAME($$$PARAMS): $TYPE"
+      # Type assertions that could be type guards
+      - pattern: "$VALUE as $TYPE"
+        where:
+          context: "conditional"
+      # Unused generic type parameters
+      - pattern: "function $NAME<$T, $U>($$$PARAMS): $RETURN { $$$BODY }"
+        not:
+          has:
+            any:
+              - pattern: "$T"
+              - pattern: "$U"
+      # Interface vs type preference
+      - pattern: |
+          type $NAME = {
+            $$$PROPERTIES
+          }
+        where:
+          extendable: true
+
+documentation:
+  reasoning: |
+    TypeScript pattern analysis helps LLMs:
+    1. Improve type safety and reliability
+    2. Identify type-related performance issues
+    3. Suggest better TypeScript patterns
+    4. Ensure type system best practices
+
+  value_proposition: |
+    - Enhances type safety through pattern detection
+    - Identifies performance-impacting type patterns
+    - Suggests TypeScript best practices
+    - Improves code maintainability
+
+  example_usecase: |
+    **Scenario**: LLM improving TypeScript codebase type safety
+    
+    **Problem**: Codebase has type safety gaps and suboptimal TypeScript usage
+    
+    **Solution**: Use this rule to:
+    1. Find 'any' type usage that needs proper typing
+    2. Identify missing return type annotations
+    3. Detect type assertion opportunities
+    4. Suggest interface vs type improvements
+    
+    **Command**: 
+    ```bash
+    ast-grep --config rules/language-specific/javascript/typescript-patterns.yaml src/ --json | jq '.[] | {type_issue: .rule_id, file: .file, function: .matches[].meta_vars.NAME}'
+    ```
+    
+    **Result**: Type safety improvement roadmap with specific recommendations
+
+  llm_assistance_benefits:
+    - "Systematically improves type safety"
+    - "Identifies performance-impacting type patterns"
+    - "Ensures TypeScript best practices"
+    - "Guides type system architecture"

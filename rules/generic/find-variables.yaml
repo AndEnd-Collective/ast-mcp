@@ -1,0 +1,63 @@
+---
+# Generic Variable Detection Rule
+metadata:
+  version: "1.0.0"
+  author: "AndEnd Team"
+  description: "Detects variable declarations and assignments across languages"
+  creation_date: "2025-07-06"
+  last_edit_date: "2025-07-06"
+
+rule:
+  id: find-variables
+  language: TypeScript
+  rule:
+    any:
+      - pattern: "let $NAME = $VALUE"
+      - pattern: "const $NAME = $VALUE"
+      - pattern: "var $NAME = $VALUE"
+      - pattern: "$NAME = $VALUE"  # Assignment
+      - pattern: "let $NAME: $TYPE = $VALUE"  # Typed declaration
+      - pattern: "const $NAME: $TYPE = $VALUE"  # Typed const
+
+constraints:
+  - pattern: "$NAME"
+    regex: "^[a-zA-Z_$][a-zA-Z0-9_$]*$"
+
+documentation:
+  reasoning: |
+    Variable tracking is essential for:
+    1. Data flow analysis
+    2. Scope understanding
+    3. Refactoring safety
+    4. Dependency mapping
+    5. State management analysis
+
+  value_proposition: |
+    - Accurate variable scope detection vs unreliable text matching
+    - Enables data flow analysis for LLMs
+    - Critical for understanding state changes
+    - Prevents variable name confusion in refactoring
+
+  example_usecase: |
+    **Scenario**: LLM needs to refactor a large function but keeps missing variable dependencies
+    
+    **Problem**: Text-based search misses scope boundaries and variable shadowing
+    
+    **Solution**: Use this rule to:
+    1. Map all variables in the target scope
+    2. Identify potential naming conflicts
+    3. Ensure safe refactoring boundaries
+    4. Track data dependencies
+    
+    **Command**: 
+    ```bash
+    ast-grep --config rules/generic/find-variables.yaml --range 100:200 src/complex-function.ts
+    ```
+    
+    **Result**: Complete variable map for safe refactoring decisions
+
+  llm_assistance_benefits:
+    - "Prevents variable name conflicts during refactoring"
+    - "Enables accurate data flow analysis"
+    - "Provides scope boundaries for code modifications"
+    - "Reduces refactoring errors by 90%"

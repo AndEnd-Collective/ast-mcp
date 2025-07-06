@@ -1,0 +1,161 @@
+---
+# Vibe Coding Anti-pattern Detection
+metadata:
+  version: "1.0.0"
+  author: "AndEnd Team"
+  description: "Detects harmful vibe coding patterns that create technical debt and maintenance issues"
+  creation_date: "2025-07-06"
+  last_edit_date: "2025-07-06"
+  use_case: "Preventing low-quality AI-generated code from accumulating technical debt"
+
+rule:
+  id: vibe-coding-antipatterns
+  language: Any
+  rule:
+    any:
+      # Generic error handling (typical AI pattern)
+      - pattern: |
+          try {
+            $$$BODY
+          } catch (error) {
+            console.log(error);
+          }
+      - pattern: |
+          try:
+              $$$BODY
+          except Exception as e:
+              print(e)
+      - pattern: |
+          try {
+              $$$BODY
+          } catch (Exception e) {
+              e.printStackTrace();
+          }
+          
+      # TODO comments indicating incomplete AI generation
+      - pattern: "// TODO: Implement this functionality"
+      - pattern: "# TODO: Add error handling"
+      - pattern: "// FIXME: This might not work in all cases"
+      - pattern: "/* Implementation needed */"
+      
+      # Copy-paste variable names (AI tends to use generic names)
+      - pattern: "let result = $VALUE"
+      - pattern: "const data = $VALUE"
+      - pattern: "var temp = $VALUE"
+      - pattern: "let item = $VALUE"
+      - pattern: "const obj = $VALUE"
+      
+      # Hardcoded values without configuration
+      - pattern: "setTimeout($FUNC, 1000)" # Magic numbers
+      - pattern: "Array($SIZE).fill(0)" # Hardcoded sizes
+      - pattern: "fetch('http://localhost:3000/$PATH')" # Hardcoded URLs
+      
+      # Inconsistent naming patterns in same file
+      - pattern: "function get$NAME" # Mixed with
+      - pattern: "const fetch$NAME" # Different naming styles
+      
+      # Missing null/undefined checks
+      - pattern: "$OBJ.$PROP.$NESTED" # Potential null reference
+      - pattern: "$ARRAY[$INDEX].$PROP" # No bounds checking
+      
+      # Security anti-patterns
+      - pattern: "eval($INPUT)"
+      - pattern: "innerHTML = $USER_INPUT"
+      - pattern: "document.write($INPUT)"
+      - pattern: "exec($COMMAND)" # Python
+      - pattern: "Runtime.getRuntime().exec($CMD)" # Java
+      
+      # SQL injection patterns
+      - pattern: '"SELECT * FROM " + $TABLE + " WHERE " + $CONDITION'
+      - pattern: 'f"SELECT * FROM {$TABLE} WHERE {$CONDITION}"'
+      - pattern: "query = \"INSERT INTO \" + $VALUES"
+
+  severity: high
+  message: "Vibe coding anti-pattern detected - requires manual review and improvement"
+  
+  problems_detected:
+    technical_debt:
+      - "Generic error handling that hides real issues"
+      - "Hardcoded values that should be configurable"
+      - "Inconsistent naming patterns across codebase"
+      - "Missing edge case handling"
+    security_issues:
+      - "SQL injection vulnerabilities"
+      - "XSS vulnerabilities through innerHTML"
+      - "Code injection through eval()"
+      - "Command injection in system calls"
+    maintainability:
+      - "Generic variable names that lack meaning"
+      - "TODO comments indicating incomplete work"
+      - "Missing null safety checks"
+      - "Copy-paste code without adaptation"
+      
+  vibe_coding_warning_signs:
+    - "Code generated quickly without understanding"
+    - "Multiple TODO comments in AI-generated sections"
+    - "Inconsistent patterns within the same file"
+    - "Generic error handling throughout"
+    - "Hardcoded values that should be dynamic"
+    - "Missing input validation and sanitization"
+    
+  improvement_strategies:
+    immediate:
+      - "Add proper error handling with specific error types"
+      - "Replace hardcoded values with configuration"
+      - "Implement proper null safety checks"
+      - "Add input validation and sanitization"
+    architectural:
+      - "Establish consistent naming conventions"
+      - "Create proper error handling hierarchy"
+      - "Implement configuration management"
+      - "Add comprehensive logging"
+    quality_control:
+      - "Code review all AI-generated sections"
+      - "Add unit tests for all generated functions"
+      - "Security audit for injection vulnerabilities"
+      - "Performance testing for scalability"
+      
+  examples:
+    bad_vibe_coding:
+      - |
+        // ❌ Typical vibe coding - generic, unsafe, hardcoded
+        function getData(id) {
+          try {
+            const result = fetch('http://localhost:3000/api/users/' + id);
+            const data = result.json();
+            document.getElementById('output').innerHTML = data.name;
+            return data;
+          } catch (error) {
+            console.log(error); // Generic error handling
+          }
+        }
+    improved_version:
+      - |
+        // ✅ Improved - specific, safe, configurable
+        async function fetchUserData(userId: string): Promise<UserData | null> {
+          try {
+            const apiUrl = process.env.API_BASE_URL || 'http://localhost:3000';
+            const response = await fetch(`${apiUrl}/api/users/${encodeURIComponent(userId)}`);
+            
+            if (!response.ok) {
+              throw new UserFetchError(`Failed to fetch user: ${response.status}`);
+            }
+            
+            const userData = await response.json();
+            
+            // Safe DOM manipulation
+            const outputElement = document.getElementById('output');
+            if (outputElement) {
+              outputElement.textContent = userData.name; // Prevents XSS
+            }
+            
+            return userData;
+          } catch (error) {
+            if (error instanceof UserFetchError) {
+              logger.warn('User fetch failed', { userId, error: error.message });
+            } else {
+              logger.error('Unexpected error in fetchUserData', { userId, error });
+            }
+            return null;
+          }
+        }

@@ -1,0 +1,194 @@
+---
+# AI-Generated Security Vulnerability Detection
+metadata:
+  version: "1.0.0"
+  author: "AndEnd Team"
+  description: "Detects common security vulnerabilities in AI-generated code"
+  creation_date: "2025-07-06"
+  last_edit_date: "2025-07-06"
+  use_case: "Preventing AI coding assistants from introducing security flaws"
+
+rule:
+  id: ai-security-vulnerabilities
+  language: Any
+  rule:
+    any:
+      # SQL Injection vulnerabilities
+      - pattern: '"SELECT * FROM $TABLE WHERE $COLUMN = \'" + $INPUT + "\'"'
+      - pattern: 'f"SELECT * FROM {$TABLE} WHERE {$COLUMN} = \'{$INPUT}\'"'
+      - pattern: '"INSERT INTO $TABLE VALUES (\'" + $VALUES + "\')"'
+      - pattern: "query = \"UPDATE $TABLE SET $COLUMN = '\" + $VALUE + \"'\""
+      
+      # XSS vulnerabilities
+      - pattern: "innerHTML = $USER_INPUT"
+      - pattern: "document.write($USER_INPUT)"
+      - pattern: "eval($USER_INPUT)"
+      - pattern: "$ELEMENT.innerHTML = $USER_DATA"
+      - pattern: "dangerouslySetInnerHTML={{ __html: $USER_INPUT }}"
+      
+      # Command injection
+      - pattern: "exec($USER_INPUT)"
+      - pattern: "system($USER_INPUT)"
+      - pattern: "subprocess.call($USER_INPUT, shell=True)"
+      - pattern: "Runtime.getRuntime().exec($USER_INPUT)"
+      - pattern: "Process.Start($USER_INPUT)"
+      
+      # Hardcoded credentials (AI often generates placeholder credentials)
+      - pattern: 'password = "password"'
+      - pattern: 'api_key = "your_api_key_here"'
+      - pattern: 'secret = "secret123"'
+      - pattern: 'token = "abc123"'
+      - pattern: "const API_KEY = 'test-key'"
+      
+      # Insecure cryptography (AI often suggests outdated methods)
+      - pattern: "MD5($INPUT)"
+      - pattern: "SHA1($INPUT)"
+      - pattern: "hashlib.md5($INPUT)"
+      - pattern: "CryptoJS.MD5($INPUT)"
+      - pattern: "MessageDigest.getInstance(\"MD5\")"
+      
+      # Insecure random number generation
+      - pattern: "Math.random()"
+      - pattern: "Random()"
+      - pattern: "rand()"
+      - pattern: "new Random().nextInt()"
+      
+      # Path traversal vulnerabilities
+      - pattern: "open($USER_PATH)"
+      - pattern: "readFile($USER_PATH)"
+      - pattern: "fs.readFile($USER_PATH)"
+      - pattern: "File($USER_PATH)"
+      
+      # Insecure deserialization
+      - pattern: "pickle.loads($USER_DATA)"
+      - pattern: "JSON.parse($USER_INPUT)"
+      - pattern: "unserialize($USER_DATA)"
+      - pattern: "eval($SERIALIZED_DATA)"
+      
+      # Sensitive data exposure
+      - pattern: "console.log($PASSWORD)"
+      - pattern: "print($API_KEY)"
+      - pattern: "logger.info($SECRET)"
+      - pattern: "System.out.println($TOKEN)"
+
+  severity: critical
+  message: "Security vulnerability detected in AI-generated code - immediate review required"
+  
+  vulnerability_categories:
+    injection_flaws:
+      sql_injection:
+        - "String concatenation in SQL queries"
+        - "Direct user input in database queries"
+        - "Missing parameterized queries"
+      command_injection:
+        - "User input passed to system commands"
+        - "Shell execution with user data"
+        - "Missing input sanitization"
+      xss:
+        - "User input directly in DOM"
+        - "innerHTML with untrusted data"
+        - "Missing output encoding"
+        
+    cryptographic_issues:
+      weak_algorithms:
+        - "MD5 and SHA1 usage"
+        - "Deprecated encryption methods"
+        - "Weak key generation"
+      insecure_random:
+        - "Predictable random numbers"
+        - "Non-cryptographic random for security"
+        - "Poor entropy sources"
+        
+    authentication_flaws:
+      hardcoded_secrets:
+        - "Credentials in source code"
+        - "API keys in plain text"
+        - "Default passwords"
+      session_management:
+        - "Insecure session handling"
+        - "Missing session timeouts"
+        - "Predictable session IDs"
+        
+    data_exposure:
+      logging_secrets:
+        - "Passwords in log files"
+        - "API keys in debug output"
+        - "Sensitive data in error messages"
+      insecure_storage:
+        - "Plain text password storage"
+        - "Unencrypted sensitive data"
+        - "Missing access controls"
+
+  ai_specific_risks:
+    common_ai_mistakes:
+      - "AI suggests deprecated security libraries"
+      - "AI generates placeholder credentials that get committed"
+      - "AI copies insecure code patterns from training data"
+      - "AI doesn't understand current security best practices"
+      - "AI suggests quick fixes that bypass security"
+      
+    detection_strategies:
+      - "Pattern matching for known vulnerable code structures"
+      - "Checking for hardcoded sensitive values"
+      - "Identifying deprecated cryptographic functions"
+      - "Scanning for missing input validation"
+      
+  remediation:
+    immediate_actions:
+      - "Replace vulnerable patterns with secure alternatives"
+      - "Add input validation and sanitization"
+      - "Implement parameterized queries"
+      - "Use secure cryptographic libraries"
+      - "Remove hardcoded credentials"
+      
+    secure_alternatives:
+      sql_safety:
+        - "Use parameterized queries or prepared statements"
+        - "Implement ORM with built-in SQL injection protection"
+        - "Validate and sanitize all user inputs"
+      xss_prevention:
+        - "Use textContent instead of innerHTML"
+        - "Implement Content Security Policy (CSP)"
+        - "Sanitize HTML content with trusted libraries"
+      crypto_security:
+        - "Use SHA-256 or SHA-3 instead of MD5/SHA1"
+        - "Implement proper key derivation functions"
+        - "Use cryptographically secure random generators"
+        
+  examples:
+    vulnerable_ai_code:
+      - |
+        // ❌ Typical AI-generated vulnerable code
+        function loginUser(username, password) {
+          const query = "SELECT * FROM users WHERE username = '" + username + 
+                       "' AND password = '" + password + "'";
+          return database.query(query);
+        }
+        
+        function displayMessage(userInput) {
+          document.getElementById('output').innerHTML = userInput;
+        }
+        
+        const API_KEY = "your_api_key_here"; // AI placeholder
+        
+    secure_version:
+      - |
+        // ✅ Secure implementation
+        async function authenticateUser(username: string, password: string): Promise<User | null> {
+          const query = 'SELECT id, username, password_hash FROM users WHERE username = ?';
+          const result = await database.query(query, [username]);
+          
+          if (result.length === 0) return null;
+          
+          const isValid = await bcrypt.compare(password, result[0].password_hash);
+          return isValid ? { id: result[0].id, username: result[0].username } : null;
+        }
+        
+        function displayMessage(userInput: string): void {
+          const outputElement = document.getElementById('output');
+          if (outputElement) {
+            outputElement.textContent = DOMPurify.sanitize(userInput);
+          }
+        }
+        
+        const API_KEY = process.env.API_KEY; // From environment variables
