@@ -1,6 +1,6 @@
 """AST-Grep MCP Server - A Model Context Protocol server for ast-grep."""
 
-__version__ = "0.1.0"
+__version__ = "1.0.0"
 __author__ = "AndEnd Collective"
 __description__ = "Model Context Protocol server wrapping ast-grep for AI-powered code analysis"
 
