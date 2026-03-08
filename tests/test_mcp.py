@@ -11,6 +11,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_basic_mcp_functionality():
     """Test basic MCP server functionality: binary detection and server creation."""

@@ -77,6 +77,7 @@ def log_message(message):
         import shutil
         shutil.rmtree(temp_dir)
 
+    @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_basic_call_graph_generation(self, generator, temp_code_files):
         """Test basic call graph generation functionality."""
@@ -106,6 +107,7 @@ def log_message(message):
             for expected in expected_functions:
                 assert expected in function_names, f"Expected function '{expected}' not found in {function_names}"
 
+    @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_schema_validation_integration(self, generator, temp_code_files):
         """Test that generated call graphs pass schema validation."""
@@ -185,6 +187,7 @@ def log_message(message):
         assert result['valid'], f"Schema validation failed: {result}"
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_create_call_graph_generator():
     """Test the factory function for creating CallGraphGenerator instances."""
@@ -205,6 +208,7 @@ class TestCallGraphGeneratorEmptyInput:
         generator = await create_call_graph_generator()
         return generator
 
+    @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_empty_file(self, generator):
         """Test call graph generation with an empty file."""
@@ -227,6 +231,7 @@ class TestCallGraphGeneratorEmptyInput:
         finally:
             os.unlink(temp_path)
 
+    @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_file_with_only_comments(self, generator):
         """Test call graph generation with a file containing only comments."""
@@ -247,6 +252,7 @@ class TestCallGraphGeneratorEmptyInput:
         finally:
             os.unlink(temp_path)
 
+    @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_nonexistent_path(self, generator):
         """Test call graph generation with non-existent file path."""
@@ -269,6 +275,7 @@ class TestCallGraphGeneratorMultipleFiles:
         """Create a CallGraphGenerator instance."""
         return await create_call_graph_generator()
 
+    @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_multiple_python_files(self, generator):
         """Test call graph generation across multiple Python files."""
@@ -302,6 +309,7 @@ class TestCallGraphGeneratorMultipleFiles:
             import shutil
             shutil.rmtree(temp_dir)
 
+    @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_directory_scan(self, generator):
         """Test call graph generation for an entire directory."""
@@ -454,6 +462,7 @@ class TestCallGraphGeneratorInitialization:
         assert generator.function_detector is None
         assert generator.call_detector is None
 
+    @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_initialize_creates_components(self):
         """Test that initialize() creates executor, function detector, and call detector."""
@@ -464,6 +473,7 @@ class TestCallGraphGeneratorInitialization:
         assert generator.function_detector is not None
         assert generator.call_detector is not None
 
+    @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_initialize_with_existing_executor(self):
         """Test initialize with pre-existing executor."""
@@ -476,6 +486,7 @@ class TestCallGraphGeneratorInitialization:
         assert generator.function_detector is not None
         assert generator.call_detector is not None
 
+    @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_factory_function_creates_initialized_generator(self):
         """Test create_call_graph_generator factory fully initializes."""

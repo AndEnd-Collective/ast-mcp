@@ -29,6 +29,7 @@ class TestFunctionDetection:
         executor = await create_ast_grep_executor()
         return FunctionDetector(executor)
 
+    @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_python_function_detection(self, function_detector):
         """Test function detection in Python files."""
@@ -102,6 +103,7 @@ async def async_function(data: List[str]) -> Dict[str, Any]:
                 ]
                 assert len(found_functions) > 0, f"No expected functions found in {function_names}"
 
+    @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_javascript_function_detection(self, function_detector):
         """Test function detection in JavaScript files."""
@@ -161,6 +163,7 @@ class MyClass {
                 function_types = [f.get('pattern_type', '') for f in functions]
                 assert len(set(function_types)) > 0
 
+    @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_parameter_parsing_accuracy(self, function_detector):
         """Test accuracy of parameter parsing across languages."""
@@ -196,6 +199,7 @@ def typed_function(x: int, y: str = "default", *args, **kwargs):
                 params = typed_func.get('parsed_parameters', [])
                 assert len(params) > 0
 
+    @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_special_function_detection(self, function_detector):
         """Test detection of special functions like decorators, generics, etc."""
@@ -248,6 +252,7 @@ def __str__(self):
                 # May be empty if security filters block AST patterns
                 assert isinstance(functions, list)
 
+    @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_error_handling(self, function_detector):
         """Test error handling for invalid inputs."""
@@ -302,6 +307,7 @@ def __str__(self):
 class TestFunctionDetectionIntegration:
     """Integration tests for function detection with real AST-grep execution."""
 
+    @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_real_ast_grep_execution(self):
         """Test actual AST-grep execution with real patterns."""
@@ -339,6 +345,7 @@ class TestFunctionDetectorInitialization:
         detector = FunctionDetector()
         assert detector.executor is None
 
+    @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_constructor_with_executor(self):
         """Test constructor with an executor."""
@@ -361,6 +368,7 @@ class TestFunctionDetectionGoLanguage:
         executor = await create_ast_grep_executor()
         return FunctionDetector(executor)
 
+    @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_go_function_detection(self, function_detector):
         """Test function detection in Go files."""
@@ -404,6 +412,7 @@ class TestFunctionDetectionRustLanguage:
         executor = await create_ast_grep_executor()
         return FunctionDetector(executor)
 
+    @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_rust_function_detection(self, function_detector):
         """Test function detection in Rust files."""
@@ -450,6 +459,7 @@ class TestFunctionDetectionJavaLanguage:
         executor = await create_ast_grep_executor()
         return FunctionDetector(executor)
 
+    @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_java_function_detection(self, function_detector):
         """Test function detection in Java files."""
@@ -492,6 +502,7 @@ class TestFunctionDetectionEdgeCases:
         executor = await create_ast_grep_executor()
         return FunctionDetector(executor)
 
+    @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_nested_functions_python(self, function_detector):
         """Test detection of nested (inner) functions in Python."""
@@ -527,6 +538,7 @@ def another_outer():
         finally:
             os.unlink(temp_path)
 
+    @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_decorated_functions_python(self, function_detector):
         """Test detection of decorated functions in Python."""
@@ -563,6 +575,7 @@ def multi_decorated():
         finally:
             os.unlink(temp_path)
 
+    @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_empty_file(self, function_detector):
         """Test detection in an empty file."""
@@ -581,6 +594,7 @@ def multi_decorated():
         finally:
             os.unlink(temp_path)
 
+    @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_file_with_syntax_errors(self, function_detector):
         """Test detection in a file with syntax errors."""
@@ -606,6 +620,7 @@ def broken_function(
         finally:
             os.unlink(temp_path)
 
+    @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_large_number_of_functions(self, function_detector):
         """Test detection with a file containing many functions."""

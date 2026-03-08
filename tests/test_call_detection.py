@@ -663,6 +663,7 @@ int main() {
 class TestCallDetectorUtilities:
     """Test suite for CallDetector utility functions."""
 
+    @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_create_call_detector_factory(self):
         """Test the create_call_detector factory function."""
