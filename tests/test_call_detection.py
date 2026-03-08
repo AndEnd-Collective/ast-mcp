@@ -290,7 +290,7 @@ int main() {
         
         call_detector.executor.search = AsyncMock(return_value={
             "success": True,
-            "matches": mock_results
+            "data": {"matches": mock_results}
         })
         
         # Create temporary file
@@ -304,19 +304,19 @@ int main() {
                 language="javascript",
                 include_metadata=True
             )
-            
-            assert result["success"] is True
-            assert "calls" in result
-            assert len(result["calls"]) > 0
-            
+
+            assert result["status"] == "success"
+            assert "calls" in result["data"]
+            assert len(result["data"]["calls"]) > 0
+
             # Check call structure
-            call = result["calls"][0]
+            call = result["data"]["calls"][0]
             assert "id" in call
             assert "text" in call
             assert "type" in call
             assert "line" in call
             assert "column" in call
-            
+
         finally:
             Path(temp_path).unlink()
 
@@ -337,7 +337,7 @@ int main() {
         
         call_detector.executor.search = AsyncMock(return_value={
             "success": True,
-            "matches": mock_results
+            "data": {"matches": mock_results}
         })
         
         with tempfile.NamedTemporaryFile(mode='w', suffix='.js', delete=False) as f:
@@ -349,29 +349,29 @@ int main() {
                 file_path=temp_path,
                 include_metadata=True
             )
-            
-            assert result["success"] is True
-            call = result["calls"][0]
-            
+
+            assert result["status"] == "success"
+            call = result["data"]["calls"][0]
+
             # Check metadata fields
             assert "call_site_info" in call
             assert "argument_analysis" in call
             assert "scope_analysis" in call
             assert "security_analysis" in call
             assert "performance_indicators" in call
-            
+
             # Check call site info
             site_info = call["call_site_info"]
             assert "position" in site_info
             assert "text_metrics" in site_info
             assert "context_clues" in site_info
-            
+
             # Check argument analysis
             arg_analysis = call["argument_analysis"]
             assert "count" in arg_analysis
             assert "types" in arg_analysis
             assert "patterns" in arg_analysis
-            
+
         finally:
             Path(temp_path).unlink()
 
@@ -408,10 +408,10 @@ int main() {
                     file_path=temp_path,
                     language=expected_lang
                 )
-                
-                assert result["success"] is True
-                assert len(result["calls"]) > 0
-                
+
+                assert result["status"] == "success"
+                assert "calls" in result["data"]
+
             finally:
                 Path(temp_path).unlink()
 
@@ -472,23 +472,25 @@ int main() {
         ]
         
         result = call_detector.detect_call_patterns(mock_calls)
-        
-        assert "detected_patterns" in result
-        assert "pattern_counts" in result
-        assert "confidence_scores" in result
+
+        assert "builder_patterns" in result
+        assert "fluent_interfaces" in result
+        assert "callback_patterns" in result
+        assert "recursive_patterns" in result
+        assert "decorator_patterns" in result
 
     @pytest.mark.asyncio
     async def test_detect_calls_in_directory(self, call_detector, sample_files):
         """Test batch processing of multiple files in a directory."""
         call_detector.executor.search = AsyncMock(return_value={
             "success": True,
-            "matches": [
+            "data": {"matches": [
                 {
                     "text": "example_call()",
                     "range": {"start": {"line": 1, "column": 0}, "end": {"line": 1, "column": 14}},
                     "metaVariables": {"FUNC": {"text": "example_call"}, "ARGS": {"text": ""}}
                 }
-            ]
+            ]}
         })
         
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -506,11 +508,11 @@ int main() {
                 recursive=True,
                 max_files=10
             )
-            
-            assert result["success"] is True
-            assert "files_processed" in result
-            assert "total_calls" in result
-            assert "results" in result
+
+            assert result["status"] == "success"
+            assert "total_files" in result["data"]
+            assert "total_calls" in result["data"]
+            assert "files" in result["data"]
 
     @pytest.mark.asyncio
     async def test_security_analysis(self, call_detector):
@@ -592,8 +594,8 @@ int main() {
         )
         
         # Should handle gracefully and return error information
-        assert "success" in result
-        # The exact behavior depends on implementation - either False or exception handling
+        assert result["status"] == "error"
+        assert "error" in result
 
     @pytest.mark.asyncio
     async def test_call_type_filtering(self, call_detector, sample_files):
@@ -618,10 +620,10 @@ int main() {
                 file_path=temp_path,
                 call_types=["constructor_call"]
             )
-            
-            assert result["success"] is True
+
+            assert result["status"] == "success"
             # Should only return constructor calls
-            
+
         finally:
             Path(temp_path).unlink()
 
@@ -652,10 +654,10 @@ int main() {
                 file_path=temp_path,
                 max_calls=5
             )
-            
-            assert result["success"] is True
-            assert len(result["calls"]) <= 5
-            
+
+            assert result["status"] == "success"
+            assert len(result["data"]["calls"]) <= 5
+
         finally:
             Path(temp_path).unlink()
 
@@ -699,7 +701,7 @@ class TestCallDetectorUtilities:
         
         test_cases = [
             ("...args", ["spread_operator"]),
-            ("{name, age}", ["object_destructuring"]),
+            ("{name: 'test', age: 25}", ["object_destructuring"]),
             ("[a, b]", ["array_destructuring"]),
             ("name = 'default'", ["default_parameters"]),
             ("await promise", ["async_await"]),

@@ -26,7 +26,7 @@ from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
-from pydantic import BaseModel, Field, validator, root_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings
 
 logger = logging.getLogger(__name__)
@@ -106,18 +106,20 @@ class PerformanceConfig(BaseModel):
     max_execution_time: int = Field(30, ge=1, description="Maximum execution time in seconds")
     max_concurrent_requests: int = Field(10, ge=1, description="Maximum concurrent requests")
     
-    @validator('memory_critical_threshold')
-    def validate_memory_critical(cls, value, values):
-        if 'memory_warning_threshold' in values and value <= values['memory_warning_threshold']:
+    @field_validator('memory_critical_threshold')
+    @classmethod
+    def validate_memory_critical(cls, value, info):
+        if 'memory_warning_threshold' in info.data and value <= info.data['memory_warning_threshold']:
             raise ValueError('Memory critical threshold must be greater than warning threshold')
         return value
-    
-    @validator('cpu_critical_threshold')
-    def validate_cpu_critical(cls, value, values):
-        if 'cpu_warning_threshold' in values and value <= values['cpu_warning_threshold']:
+
+    @field_validator('cpu_critical_threshold')
+    @classmethod
+    def validate_cpu_critical(cls, value, info):
+        if 'cpu_warning_threshold' in info.data and value <= info.data['cpu_warning_threshold']:
             raise ValueError('CPU critical threshold must be greater than warning threshold')
         return value
-    
+
     class Config:
         env_prefix = "AST_GREP_PERFORMANCE_"
 
@@ -340,7 +342,7 @@ class ConfigurationManager:
         if not self._config:
             return ""
         
-        config_json = self._config.json(sort_keys=True)
+        config_json = self._config.model_dump_json()
         return hashlib.sha256(config_json.encode()).hexdigest()
     
     def _log_configuration_change(self, action: str, description: str):
@@ -396,8 +398,8 @@ class ConfigurationManager:
             self.config_dir.mkdir(parents=True, exist_ok=True)
             
             # Convert to dictionary
-            config_dict = config_to_save.dict()
-            
+            config_dict = config_to_save.model_dump(mode='json')
+
             # Save to YAML file
             config_path = self._config_file_path or (self.config_dir / self.config_file_name)
             with config_path.open('w', encoding='utf-8') as f:
@@ -418,8 +420,8 @@ class ConfigurationManager:
                 raise ConfigurationError("No configuration loaded")
             
             output_path = Path(output_path)
-            config_dict = self._config.dict()
-            
+            config_dict = self._config.model_dump(mode='json')
+
             if format.lower() == "yaml":
                 with output_path.open('w', encoding='utf-8') as f:
                     yaml.dump(config_dict, f, default_flow_style=False, indent=2)
@@ -520,7 +522,7 @@ class ConfigurationManager:
             # Save template
             output_path = Path(output_path)
             with output_path.open('w', encoding='utf-8') as f:
-                yaml.dump(template_config.dict(), f, default_flow_style=False, indent=2)
+                yaml.dump(template_config.model_dump(mode='json'), f, default_flow_style=False, indent=2)
             
             logger.info(f"Created {environment.value} configuration template at {output_path}")
             return True

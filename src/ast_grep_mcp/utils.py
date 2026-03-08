@@ -684,7 +684,7 @@ class LanguageManager:
         """
         from .resources import SUPPORTED_LANGUAGES
         
-        normalized = self.validate_language_identifier(language)
+        normalized = self.validate_language_identifier(language, return_normalized=True)
         info = SUPPORTED_LANGUAGES[normalized].copy()
         info["canonical_name"] = normalized
         return info

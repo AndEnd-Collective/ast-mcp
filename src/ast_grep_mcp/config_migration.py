@@ -176,7 +176,7 @@ class ConfigurationMigrator:
             output_file.parent.mkdir(parents=True, exist_ok=True)
             
             # Convert to dictionary and save as YAML
-            config_dict = config.dict()
+            config_dict = config.model_dump(mode='json')
             
             with output_file.open('w', encoding='utf-8') as f:
                 yaml.dump(config_dict, f, default_flow_style=False, indent=2)
