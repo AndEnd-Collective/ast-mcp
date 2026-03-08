@@ -14,7 +14,7 @@ This guide covers deploying the AST-Grep MCP Server in various environments, fro
 ## Prerequisites
 
 ### System Requirements
-- **Python 3.8+** with pip
+- **Python 3.12+** with pip
 - **Memory**: Minimum 512MB, recommended 2GB+ for large codebases
 - **Storage**: 100MB for application + space for logs and cache
 - **CPU**: Single core minimum, multi-core recommended for concurrent operations
@@ -46,7 +46,7 @@ This guide covers deploying the AST-Grep MCP Server in various environments, fro
 ### Method 1: From Source (Recommended for Development)
 ```bash
 # Clone repository
-git clone https://github.com/your-org/ast-grep-mcp.git
+git clone https://github.com/AndEnd-Collective/ast-mcp.git
 cd ast-grep-mcp
 
 # Install in development mode
@@ -56,13 +56,11 @@ pip install -e .
 pip install -e .[dev]
 ```
 
-### Method 2: From PyPI (Production)
+### Method 2: From PyPI (Upcoming)
 ```bash
-# Install from PyPI (when published)
-pip install ast-grep-mcp
-
-# Or with specific version
-pip install ast-grep-mcp==1.0.0
+# PyPI package is planned for a future release.
+# For now, install from source (Method 1) or use Docker (Method 3).
+pip install ast-grep-mcp  # coming soon
 ```
 
 ### Method 3: Docker Deployment
@@ -239,7 +237,7 @@ ast-grep-mcp --config prod-config.yaml
 ### Docker Production Deployment
 ```dockerfile
 # Dockerfile
-FROM python:3.11-slim
+FROM python:3.12-slim
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -559,10 +557,9 @@ diff legacy-config.env new-config.yaml
 ## Support
 
 For additional support:
-- **Issues**: https://github.com/your-org/ast-grep-mcp/issues
-- **Documentation**: https://your-docs-site.com
-- **Community**: https://your-community-forum.com
+- **Issues**: https://github.com/AndEnd-Collective/ast-mcp/issues
+- **Documentation**: https://github.com/AndEnd-Collective/ast-mcp#readme
 
 ---
 
-*Last updated: January 2024* 
+*Last updated: March 2026* 

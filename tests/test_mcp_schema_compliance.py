@@ -16,6 +16,8 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional, Union, get_type_hints, get_origin, get_args
 import time
 
+import pytest
+
 # Add src to Python path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
@@ -63,10 +65,10 @@ except ImportError as e:
     sys.exit(1)
 
 
-class MCPSchemaComplianceValidator:
+class TestMCPSchemaCompliance:
     """Validate MCP schema compliance and structured output."""
-    
-    def __init__(self):
+
+    def setup_method(self):
         self.test_results = []
         self.server = None
         
@@ -234,6 +236,7 @@ class MCPSchemaComplianceValidator:
         except Exception:
             return False
     
+    @pytest.mark.asyncio
     async def test_pydantic_model_schemas(self):
         """Test Pydantic model schema generation."""
         print("\n📋 Testing Pydantic Model Schema Generation")
@@ -289,6 +292,7 @@ class MCPSchemaComplianceValidator:
                 f"Structured output {'compliant' if passed else 'non-compliant'}"
             )
     
+    @pytest.mark.asyncio
     async def test_tool_input_validation(self):
         """Test tool input validation against schemas."""
         print("\n🔍 Testing Tool Input Validation")
@@ -367,6 +371,7 @@ class MCPSchemaComplianceValidator:
                     f"Unexpected error: {e}"
                 )
     
+    @pytest.mark.asyncio
     async def test_tool_output_validation(self):
         """Test tool output validation and structured output compliance."""
         print("\n📤 Testing Tool Output Validation")
@@ -439,6 +444,7 @@ class MCPSchemaComplianceValidator:
                 f"Serialization error: {e}"
             )
     
+    @pytest.mark.asyncio
     async def test_type_annotation_compliance(self):
         """Test type annotation compliance with MCP patterns."""
         print("\n🏷️ Testing Type Annotation Compliance")
@@ -507,6 +513,7 @@ class MCPSchemaComplianceValidator:
                     f"Error: {e}"
                 )
     
+    @pytest.mark.asyncio
     async def test_schema_consistency(self):
         """Test schema consistency between input/output models."""
         print("\n🔄 Testing Schema Consistency")
@@ -559,8 +566,10 @@ class MCPSchemaComplianceValidator:
                 f"Error: {e}"
             )
     
+    @pytest.mark.asyncio
     async def test_mcp_server_tool_schemas(self):
         """Test that server-registered tools have valid schemas."""
+        await self.setup_server()
         print("\n🛠️ Testing MCP Server Tool Schemas")
         
         try:
@@ -683,75 +692,3 @@ class MCPSchemaComplianceValidator:
                 f"Error: {e}"
             )
     
-    async def run_all_tests(self):
-        """Run all schema compliance validation tests."""
-        print("=" * 60)
-        print("MCP Schema Compliance Validation Tests")
-        print("=" * 60)
-        
-        try:
-            # Setup server
-            if not await self.setup_server():
-                return False
-            
-            # Run test suite
-            await self.test_pydantic_model_schemas()
-            await self.test_tool_input_validation()
-            await self.test_tool_output_validation()
-            await self.test_type_annotation_compliance()
-            await self.test_schema_consistency()
-            await self.test_mcp_server_tool_schemas()
-            
-            return True
-            
-        except Exception as e:
-            print(f"❌ Schema compliance validation test suite failed: {e}")
-            return False
-    
-    def print_summary(self):
-        """Print test summary."""
-        print("\n" + "=" * 60)
-        print("SCHEMA COMPLIANCE VALIDATION TEST SUMMARY")
-        print("=" * 60)
-        
-        total_tests = len(self.test_results)
-        passed_tests = sum(1 for result in self.test_results if result["passed"])
-        failed_tests = total_tests - passed_tests
-        
-        print(f"Total Tests: {total_tests}")
-        print(f"Passed: {passed_tests}")
-        print(f"Failed: {failed_tests}")
-        print(f"Success Rate: {(passed_tests / total_tests * 100):.1f}%")
-        
-        if failed_tests > 0:
-            print("\nFailed Tests:")
-            for result in self.test_results:
-                if not result["passed"]:
-                    print(f"  - {result['test']}: {result['details']}")
-        
-        return failed_tests == 0
-
-
-async def main():
-    """Main test function."""
-    validator = MCPSchemaComplianceValidator()
-    
-    try:
-        success = await validator.run_all_tests()
-        validator.print_summary()
-        
-        if success:
-            print("\n🎉 All schema compliance validation tests passed!")
-            return 0
-        else:
-            print("\n❌ Some schema compliance validation tests failed!")
-            return 1
-            
-    except Exception as e:
-        print(f"❌ Test suite failed: {e}")
-        return 1
-
-
-if __name__ == "__main__":
-    exit_code = asyncio.run(main())
-    sys.exit(exit_code)

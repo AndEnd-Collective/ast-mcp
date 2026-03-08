@@ -19,6 +19,8 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
 from contextlib import asynccontextmanager
 
+import pytest
+
 # Add src to Python path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
@@ -32,10 +34,10 @@ except ImportError as e:
     sys.exit(1)
 
 
-class MCPTransportTester:
+class TestMCPTransport:
     """Test MCP transport layer functionality."""
-    
-    def __init__(self):
+
+    def setup_method(self):
         self.test_results = []
         self.server_process = None
         
@@ -127,6 +129,7 @@ if __name__ == "__main__":
             except:
                 pass
     
+    @pytest.mark.asyncio
     async def test_stdio_transport_basic(self):
         """Test basic stdio transport functionality."""
         print("\n📡 Testing Basic Stdio Transport")
@@ -189,6 +192,7 @@ if __name__ == "__main__":
                 f"Error: {e}"
             )
     
+    @pytest.mark.asyncio
     async def test_message_framing(self):
         """Test message framing and parsing."""
         print("\n📦 Testing Message Framing and Parsing")
@@ -272,6 +276,7 @@ if __name__ == "__main__":
                 f"Error: {e}"
             )
     
+    @pytest.mark.asyncio
     async def test_connection_lifecycle(self):
         """Test connection lifecycle management."""
         print("\n🔄 Testing Connection Lifecycle")
@@ -373,6 +378,7 @@ if __name__ == "__main__":
                 f"Error: {e}"
             )
     
+    @pytest.mark.asyncio
     async def test_transport_error_handling(self):
         """Test error handling in transport layer."""
         print("\n❌ Testing Transport Error Handling")
@@ -541,6 +547,7 @@ if __name__ == "__main__":
                 f"Error: {e}"
             )
     
+    @pytest.mark.asyncio
     async def test_message_ordering(self):
         """Test message ordering and synchronization."""
         print("\n🔄 Testing Message Ordering")
@@ -602,6 +609,7 @@ if __name__ == "__main__":
                 f"Error: {e}"
             )
     
+    @pytest.mark.asyncio
     async def test_large_message_handling(self):
         """Test handling of large messages."""
         print("\n📏 Testing Large Message Handling")
@@ -699,71 +707,3 @@ if __name__ == "__main__":
                 f"Error: {e}"
             )
     
-    async def run_all_tests(self):
-        """Run all transport layer tests."""
-        print("=" * 60)
-        print("MCP Transport Layer Tests")
-        print("=" * 60)
-        
-        try:
-            # Run test suite
-            await self.test_stdio_transport_basic()
-            await self.test_message_framing()
-            await self.test_connection_lifecycle()
-            await self.test_transport_error_handling()
-            await self.test_message_ordering()
-            await self.test_large_message_handling()
-            
-            return True
-            
-        except Exception as e:
-            print(f"❌ Transport layer test suite failed: {e}")
-            return False
-    
-    def print_summary(self):
-        """Print test summary."""
-        print("\n" + "=" * 60)
-        print("TRANSPORT LAYER TEST SUMMARY")
-        print("=" * 60)
-        
-        total_tests = len(self.test_results)
-        passed_tests = sum(1 for result in self.test_results if result["passed"])
-        failed_tests = total_tests - passed_tests
-        
-        print(f"Total Tests: {total_tests}")
-        print(f"Passed: {passed_tests}")
-        print(f"Failed: {failed_tests}")
-        print(f"Success Rate: {(passed_tests / total_tests * 100):.1f}%")
-        
-        if failed_tests > 0:
-            print("\nFailed Tests:")
-            for result in self.test_results:
-                if not result["passed"]:
-                    print(f"  - {result['test']}: {result['details']}")
-        
-        return failed_tests == 0
-
-
-async def main():
-    """Main test function."""
-    tester = MCPTransportTester()
-    
-    try:
-        success = await tester.run_all_tests()
-        tester.print_summary()
-        
-        if success:
-            print("\n🎉 All transport layer tests passed!")
-            return 0
-        else:
-            print("\n❌ Some transport layer tests failed!")
-            return 1
-            
-    except Exception as e:
-        print(f"❌ Test suite failed: {e}")
-        return 1
-
-
-if __name__ == "__main__":
-    exit_code = asyncio.run(main())
-    sys.exit(exit_code)

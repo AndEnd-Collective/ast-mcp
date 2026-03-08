@@ -2,33 +2,33 @@
 # This file defines who should review specific parts of the codebase
 
 # Global fallback - require review from repository maintainers
-* @AndEnd-Org/maintainers
+* @AndEnd-Collective/maintainers
 
 # Core MCP server implementation
-/src/ast_grep_mcp/server.py @AndEnd-Org/core-maintainers
-/src/ast_grep_mcp/tools.py @AndEnd-Org/core-maintainers
+/src/ast_grep_mcp/server.py @AndEnd-Collective/core-maintainers
+/src/ast_grep_mcp/tools.py @AndEnd-Collective/core-maintainers
 
 # Security-related files - require security team review
-/src/ast_grep_mcp/security.py @AndEnd-Org/security-team
-/.github/workflows/security.yml @AndEnd-Org/security-team
+/src/ast_grep_mcp/security.py @AndEnd-Collective/security-team
+/.github/workflows/security.yml @AndEnd-Collective/security-team
 
 # Configuration and deployment
-/src/ast_grep_mcp/config.py @AndEnd-Org/maintainers
-/.github/workflows/ @AndEnd-Org/devops-team
-/pyproject.toml @AndEnd-Org/maintainers
+/src/ast_grep_mcp/config.py @AndEnd-Collective/maintainers
+/.github/workflows/ @AndEnd-Collective/devops-team
+/pyproject.toml @AndEnd-Collective/maintainers
 
 # Documentation
-/docs/ @AndEnd-Org/documentation-team
-/README.md @AndEnd-Org/documentation-team
-/.github/pull_request_template.md @AndEnd-Org/documentation-team
+/docs/ @AndEnd-Collective/documentation-team
+/README.md @AndEnd-Collective/documentation-team
+/.github/pull_request_template.md @AndEnd-Collective/documentation-team
 
 # Tests - require maintainer review
-/tests/ @AndEnd-Org/maintainers
+/tests/ @AndEnd-Collective/maintainers
 
 # Release and distribution
-/scripts/release.sh @AndEnd-Org/release-team
-/.github/workflows/release.yml @AndEnd-Org/release-team
+/scripts/release.sh @AndEnd-Collective/release-team
+/.github/workflows/release.yml @AndEnd-Collective/release-team
 
 # Branch protection and repository configuration
-/.github/branch-protection-rules.md @AndEnd-Org/admin-team
-/.github/CODEOWNERS @AndEnd-Org/admin-team
+/.github/branch-protection-rules.md @AndEnd-Collective/admin-team
+/.github/CODEOWNERS @AndEnd-Collective/admin-team

@@ -25,7 +25,7 @@ from ast_grep_mcp.utils import ASTGrepError
 class TestSearchToolInput:
     """Test SearchToolInput validation and processing."""
     
-    @patch('src.ast_grep_mcp.tools.get_language_manager')
+    @patch('ast_grep_mcp.tools.get_language_manager')
     def test_valid_input_basic(self, mock_get_manager):
         """Test basic valid input parameters."""
         # Mock language manager
@@ -45,7 +45,7 @@ class TestSearchToolInput:
         assert input_data.recursive is True
         assert input_data.output_format == "json"
     
-    @patch('src.ast_grep_mcp.tools.get_language_manager')
+    @patch('ast_grep_mcp.tools.get_language_manager')
     def test_valid_input_with_globs(self, mock_get_manager):
         """Test input with custom glob patterns."""
         # Mock language manager
@@ -63,7 +63,7 @@ class TestSearchToolInput:
         assert input_data.include_globs == ["*.test.ts", "*.spec.ts"]
         assert input_data.exclude_globs == ["node_modules/**", "dist/**"]
     
-    @patch('src.ast_grep_mcp.tools.get_language_manager')
+    @patch('ast_grep_mcp.tools.get_language_manager')
     def test_pattern_validation_empty(self, mock_get_manager):
         """Test pattern validation rejects empty patterns."""
         # Mock language manager
@@ -79,7 +79,7 @@ class TestSearchToolInput:
                 path="./src"
             )
     
-    @patch('src.ast_grep_mcp.tools.get_language_manager')
+    @patch('ast_grep_mcp.tools.get_language_manager')
     def test_pattern_validation_dangerous_chars(self, mock_get_manager):
         """Test pattern validation rejects dangerous characters."""
         # Mock language manager
@@ -87,23 +87,27 @@ class TestSearchToolInput:
         mock_manager.validate_language_identifier.return_value = "javascript"
         mock_get_manager.return_value = mock_manager
         
-        dangerous_patterns = [
-            "console.log(`danger`)",      # backtick is always dangerous
-            "pattern; malicious",         # semicolon is always dangerous
-            "pattern && malicious",       # double ampersand is dangerous
-            "pattern || malicious",       # double pipe is dangerous
-        ]
-        
         from pydantic import ValidationError
-        for pattern in dangerous_patterns:
+
+        # Backtick and semicolon trigger "Potentially dangerous character"
+        for pattern in ["console.log(`danger`)", "pattern; malicious"]:
             with pytest.raises(ValidationError, match="Potentially dangerous character"):
                 SearchToolInput(
                     pattern=pattern,
                     language="javascript",
                     path="./src"
                 )
+
+        # Double && and || trigger "Shell operators" error
+        for pattern in ["pattern && malicious", "pattern || malicious"]:
+            with pytest.raises(ValidationError, match="Shell operators"):
+                SearchToolInput(
+                    pattern=pattern,
+                    language="javascript",
+                    path="./src"
+                )
     
-    @patch('src.ast_grep_mcp.tools.get_language_manager')
+    @patch('ast_grep_mcp.tools.get_language_manager')
     def test_language_validation_valid_languages(self, mock_get_manager):
         """Test language validation accepts valid language identifiers."""
         valid_languages = [
@@ -125,7 +129,7 @@ class TestSearchToolInput:
             # Language should be normalized by the validator
             assert input_data.language is not None
     
-    @patch('src.ast_grep_mcp.tools.get_language_manager')
+    @patch('ast_grep_mcp.tools.get_language_manager')
     def test_language_validation_invalid_language(self, mock_get_manager):
         """Test language validation rejects invalid languages."""
         # Mock language manager to raise error for invalid language
@@ -141,7 +145,7 @@ class TestSearchToolInput:
                 path="./src"
             )
     
-    @patch('src.ast_grep_mcp.tools.get_language_manager')
+    @patch('ast_grep_mcp.tools.get_language_manager')
     def test_path_validation_empty(self, mock_get_manager):
         """Test path validation rejects empty paths."""
         # Mock language manager
@@ -157,7 +161,7 @@ class TestSearchToolInput:
                 path=""
             )
     
-    @patch('src.ast_grep_mcp.tools.get_language_manager')
+    @patch('ast_grep_mcp.tools.get_language_manager')
     def test_output_format_validation(self, mock_get_manager):
         """Test output format validation."""
         # Mock language manager
@@ -185,7 +189,7 @@ class TestSearchToolInput:
                 output_format="JSON"  # Uppercase not allowed
             )
     
-    @patch('src.ast_grep_mcp.tools.get_language_manager')
+    @patch('ast_grep_mcp.tools.get_language_manager')
     def test_glob_validation_dangerous_patterns(self, mock_get_manager):
         """Test glob validation rejects dangerous patterns."""
         # Mock language manager
@@ -214,7 +218,7 @@ class TestSearchToolInput:
 class TestBuildSearchArgs:
     """Test _build_search_args function."""
     
-    @patch('src.ast_grep_mcp.tools.get_language_manager')
+    @patch('ast_grep_mcp.tools.get_language_manager')
     def test_basic_args(self, mock_get_manager):
         """Test basic argument building."""
         # Mock language manager for input validation
@@ -233,7 +237,7 @@ class TestBuildSearchArgs:
         assert "--json" in args
         assert "--no-recurse" not in args  # recursive=True by default
     
-    @patch('src.ast_grep_mcp.tools.get_language_manager')
+    @patch('ast_grep_mcp.tools.get_language_manager')
     def test_non_recursive_args(self, mock_get_manager):
         """Test non-recursive argument building."""
         # Mock language manager for input validation
@@ -253,7 +257,7 @@ class TestBuildSearchArgs:
         assert "--json" in args
         assert "--no-recurse" in args
     
-    @patch('src.ast_grep_mcp.tools.get_language_manager')
+    @patch('ast_grep_mcp.tools.get_language_manager')
     def test_custom_include_globs(self, mock_get_manager):
         """Test custom include glob patterns."""
         # Mock language manager for input validation
@@ -273,7 +277,7 @@ class TestBuildSearchArgs:
         assert "*.test.js" in args
         assert "*.spec.js" in args
     
-    @patch('src.ast_grep_mcp.tools.get_language_manager')
+    @patch('ast_grep_mcp.tools.get_language_manager')
     def test_exclude_globs(self, mock_get_manager):
         """Test exclude glob patterns."""
         # Mock language manager for input validation
@@ -294,7 +298,7 @@ class TestBuildSearchArgs:
         assert "node_modules/**" in args
         assert "*.min.js" in args
     
-    @patch('src.ast_grep_mcp.tools.get_language_manager')
+    @patch('ast_grep_mcp.tools.get_language_manager')
     def test_language_based_include_patterns(self, mock_get_manager):
         """Test language-based file extension patterns as fallback."""
         # Mock language manager
@@ -382,7 +386,7 @@ class TestResultFormatting:
         assert result["status"] == "success"
         assert len(result["matches"]) == 0
     
-    @patch('src.ast_grep_mcp.tools.get_language_manager')
+    @patch('ast_grep_mcp.tools.get_language_manager')
     def test_format_text_results_with_matches(self, mock_get_manager):
         """Test text formatting with match results."""
         # Mock language manager for input validation
@@ -428,7 +432,7 @@ class TestResultFormatting:
         assert "Status: Success" in result
         assert "Execution time: 0.089s" in result
     
-    @patch('src.ast_grep_mcp.tools.get_language_manager')
+    @patch('ast_grep_mcp.tools.get_language_manager')
     def test_format_text_results_no_matches(self, mock_get_manager):
         """Test text formatting with no matches."""
         # Mock language manager for input validation
@@ -458,8 +462,8 @@ class TestASTGrepSearchIntegration:
     """Test ast_grep_search function integration."""
     
     @pytest.mark.asyncio
-    @patch('src.ast_grep_mcp.tools.create_ast_grep_executor')
-    @patch('src.ast_grep_mcp.tools.get_language_manager')
+    @patch('ast_grep_mcp.tools.create_ast_grep_executor')
+    @patch('ast_grep_mcp.tools.get_language_manager')
     async def test_successful_search_json_output(self, mock_get_manager, mock_create_executor):
         """Test successful search with JSON output."""
         # Mock language manager
@@ -510,8 +514,8 @@ class TestASTGrepSearchIntegration:
         assert len(parsed_result["matches"]) == 1
     
     @pytest.mark.asyncio
-    @patch('src.ast_grep_mcp.tools.create_ast_grep_executor')
-    @patch('src.ast_grep_mcp.tools.get_language_manager')
+    @patch('ast_grep_mcp.tools.create_ast_grep_executor')
+    @patch('ast_grep_mcp.tools.get_language_manager')
     async def test_successful_search_text_output(self, mock_get_manager, mock_create_executor):
         """Test successful search with text output."""
         # Mock language manager
@@ -556,8 +560,8 @@ class TestASTGrepSearchIntegration:
         assert "AST-Grep Search Results" in result[0].text
     
     @pytest.mark.asyncio
-    @patch('src.ast_grep_mcp.tools.create_ast_grep_executor')
-    @patch('src.ast_grep_mcp.tools.get_language_manager')
+    @patch('ast_grep_mcp.tools.create_ast_grep_executor')
+    @patch('ast_grep_mcp.tools.get_language_manager')
     async def test_search_with_ast_grep_error(self, mock_get_manager, mock_create_executor):
         """Test search handling AST-Grep errors."""
         # Mock language manager
@@ -592,8 +596,8 @@ class TestASTGrepSearchIntegration:
         assert parsed_result["pattern"] == "invalid_pattern["
     
     @pytest.mark.asyncio
-    @patch('src.ast_grep_mcp.tools.create_ast_grep_executor')
-    @patch('src.ast_grep_mcp.tools.get_language_manager')
+    @patch('ast_grep_mcp.tools.create_ast_grep_executor')
+    @patch('ast_grep_mcp.tools.get_language_manager')
     async def test_search_with_unexpected_error(self, mock_get_manager, mock_create_executor):
         """Test search handling unexpected errors."""
         # Mock language manager
@@ -647,8 +651,8 @@ class TestMultiLanguageSupport:
         ("scala", "def $NAME($ARGS): $TYPE", "scala")
     ])
     @pytest.mark.asyncio
-    @patch('src.ast_grep_mcp.tools.create_ast_grep_executor')
-    @patch('src.ast_grep_mcp.tools.get_language_manager')
+    @patch('ast_grep_mcp.tools.create_ast_grep_executor')
+    @patch('ast_grep_mcp.tools.get_language_manager')
     async def test_language_specific_patterns(self, mock_get_manager, mock_create_executor, 
                                              language, pattern, expected_ast_grep_lang):
         """Test language-specific pattern matching."""
@@ -707,8 +711,8 @@ class TestEdgeCases:
     """Test edge cases and boundary conditions."""
     
     @pytest.mark.asyncio
-    @patch('src.ast_grep_mcp.tools.create_ast_grep_executor')
-    @patch('src.ast_grep_mcp.tools.get_language_manager')
+    @patch('ast_grep_mcp.tools.create_ast_grep_executor')
+    @patch('ast_grep_mcp.tools.get_language_manager')
     async def test_empty_search_results(self, mock_get_manager, mock_create_executor):
         """Test handling of empty search results."""
         # Mock language manager
@@ -744,8 +748,8 @@ class TestEdgeCases:
         assert len(parsed_result["matches"]) == 0
     
     @pytest.mark.asyncio
-    @patch('src.ast_grep_mcp.tools.create_ast_grep_executor')
-    @patch('src.ast_grep_mcp.tools.get_language_manager')
+    @patch('ast_grep_mcp.tools.create_ast_grep_executor')
+    @patch('ast_grep_mcp.tools.get_language_manager')
     async def test_malformed_search_results(self, mock_get_manager, mock_create_executor):
         """Test handling of malformed search results."""
         # Mock language manager
@@ -787,11 +791,11 @@ class TestEdgeCases:
     
     def test_extremely_long_pattern(self):
         """Test handling of very long patterns."""
-        long_pattern = "x" * 10000  # Very long pattern (exceeds 8192 limit)
-        
+        long_pattern = "x" * 10000  # Very long pattern (exceeds 4000 limit)
+
         # Should raise ValidationError due to max_length constraint
         from pydantic import ValidationError
-        with pytest.raises(ValidationError, match="String should have at most 8192 characters"):
+        with pytest.raises(ValidationError, match="String should have at most 4000 characters"):
             SearchToolInput(
                 pattern=long_pattern,
                 language="javascript",

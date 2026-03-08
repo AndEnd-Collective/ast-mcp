@@ -17,12 +17,12 @@ on:
       python_version:
         description: 'Python version to test'
         required: true
-        default: '3.11'
+        default: '3.14'
         type: choice
         options:
-        - '3.10'
-        - '3.11'
         - '3.12'
+        - '3.13'
+        - '3.14'
       debug_mode:
         description: 'Enable debug output'
         required: false

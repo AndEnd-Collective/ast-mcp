@@ -2,24 +2,23 @@
 
 ## Quick Install for End Users
 
-### Option 1: Install from PyPI (Recommended)
+### Option 1: Install from Source (Current)
 ```bash
-pip install ast-grep-mcp
+git clone https://github.com/AndEnd-Collective/ast-mcp.git
+cd ast-mcp
+pip install -e .
 ```
 
-### Option 2: Install from GitHub
+### Option 2: Install from GitHub (Direct)
 ```bash
-pip install git+https://github.com/AndEnd-Org/ast-mcp.git
+pip install git+https://github.com/AndEnd-Collective/ast-mcp.git
 ```
 
-### Option 3: Install via pipx (Isolated Environment)
-```bash
-pipx install ast-grep-mcp
-```
+> **Note**: PyPI package is planned for a future release. For now, install from source.
 
 ## Prerequisites
 
-1. **Python 3.8+** - Required for the MCP server
+1. **Python 3.12+** - Required for the MCP server
 2. **AST-Grep Binary** - Install from [ast-grep.github.io](https://ast-grep.github.io/guide/quick-start.html#installation)
 
 ### Installing AST-Grep
@@ -39,43 +38,58 @@ Download from [GitHub Releases](https://github.com/ast-grep/ast-grep/releases)
 
 ## MCP Client Configuration
 
-### Claude Desktop
+### Claude Code
 
-Add to your Claude Desktop configuration file:
-
-**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
-**Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+Add to your `.claude/settings.json` or project-level `.mcp.json`:
 
 ```json
 {
   "mcpServers": {
-    "ast-grep-mcp": {
-      "command": "ast-grep-mcp",
-      "args": []
+    "ast-mcp": {
+      "command": "python",
+      "args": ["-m", "ast_grep_mcp.server"],
+      "cwd": "/path/to/ast-mcp"
     }
   }
 }
 ```
 
-### Continue.dev
+### Codex
 
-Add to your `config.json`:
+Add to your MCP configuration:
 
 ```json
 {
-  "mcpServers": [
-    {
-      "name": "ast-grep-mcp",
-      "command": "ast-grep-mcp"
+  "mcpServers": {
+    "ast-mcp": {
+      "command": "python",
+      "args": ["-m", "ast_grep_mcp.server"],
+      "cwd": "/path/to/ast-mcp"
     }
-  ]
+  }
+}
+```
+
+### OpenCode
+
+Add to your `opencode.json` MCP configuration:
+
+```json
+{
+  "mcpServers": {
+    "ast-mcp": {
+      "command": "python",
+      "args": ["-m", "ast_grep_mcp.server"],
+      "cwd": "/path/to/ast-mcp"
+    }
+  }
 }
 ```
 
 ### Other MCP Clients
 
 For other MCP-compatible clients, use:
-- **Command**: `ast-grep-mcp`
+- **Command**: `python -m ast_grep_mcp.server`
 - **Transport**: stdio
 - **Capabilities**: tools, resources
 

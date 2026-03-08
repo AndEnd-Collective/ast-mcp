@@ -2,7 +2,7 @@ name: MCP Validation and Testing
 
 on:
   push:
-    branches: [ main, develop, feature/* ]
+    branches: [ main, develop, feature/*, feat/* ]
   pull_request:
     branches: [ main, develop ]
   workflow_dispatch:
@@ -14,7 +14,7 @@ on:
         type: boolean
 
 env:
-  PYTHON_VERSION: "3.11"
+  PYTHON_VERSION: "3.14"
   
 jobs:
   # Foundation check - ensures basic setup and dependencies
@@ -94,45 +94,11 @@ jobs:
       run: |
         echo "PYTHONPATH=$GITHUB_WORKSPACE/src" >> $GITHUB_ENV
         
-    - name: Run Protocol Message Validation
+    - name: Run MCP Protocol Compliance Tests
       run: |
-        echo "🔍 Testing MCP Protocol Message Validation..."
-        python tests/test_mcp_protocol_messages.py
-        if [ $? -ne 0 ]; then
-          echo "❌ Protocol message validation failed!"
-          exit 1
-        fi
-        echo "✅ Protocol message validation passed"
-        
-    - name: Run Client-Server Integration Tests
-      run: |
-        echo "🤝 Testing MCP Client-Server Integration..."
-        python tests/test_mcp_client_integration.py
-        if [ $? -ne 0 ]; then
-          echo "❌ Client-server integration failed!"
-          exit 1
-        fi
-        echo "✅ Client-server integration passed"
-        
-    - name: Run Schema Compliance Tests
-      run: |
-        echo "📋 Testing MCP Schema Compliance..."
-        python tests/test_mcp_schema_compliance.py
-        if [ $? -ne 0 ]; then
-          echo "❌ Schema compliance failed!"
-          exit 1
-        fi
-        echo "✅ Schema compliance passed"
-        
-    - name: Run Structured Output Tests
-      run: |
-        echo "📤 Testing MCP Structured Output..."
-        python tests/test_mcp_structured_output.py
-        if [ $? -ne 0 ]; then
-          echo "❌ Structured output validation failed!"
-          exit 1
-        fi
-        echo "✅ Structured output validation passed"
+        echo "🔍 Testing MCP Protocol Compliance..."
+        python -m pytest tests/test_mcp_client_integration.py tests/test_mcp_schema_compliance.py -v
+        echo "✅ MCP protocol compliance tests passed"
 
   # Transport Layer and Communication Tests
   transport-tests:
@@ -170,11 +136,7 @@ jobs:
     - name: Run Transport Layer Tests
       run: |
         echo "🚀 Testing MCP Transport Layer..."
-        python tests/test_mcp_transport.py
-        if [ $? -ne 0 ]; then
-          echo "❌ Transport layer tests failed!"
-          exit 1
-        fi
+        python -m pytest tests/test_mcp_transport.py -v
         echo "✅ Transport layer tests passed"
 
   # Functional AST-Grep Integration Tests
@@ -210,45 +172,11 @@ jobs:
       run: |
         echo "PYTHONPATH=$GITHUB_WORKSPACE/src" >> $GITHUB_ENV
         
-    - name: Run AST-Grep Search Tests
+    - name: Run AST-Grep and MCP Functionality Tests
       run: |
-        echo "🔍 Testing AST-Grep Search Functionality..."
-        python tests/test_ast_grep_search.py
-        if [ $? -ne 0 ]; then
-          echo "❌ AST-Grep search tests failed!"
-          exit 1
-        fi
-        echo "✅ AST-Grep search tests passed"
-        
-    - name: Run AST-Grep Scan Tests
-      run: |
-        echo "🔍 Testing AST-Grep Scan Functionality..."
-        python tests/test_ast_grep_scan.py
-        if [ $? -ne 0 ]; then
-          echo "❌ AST-Grep scan tests failed!"
-          exit 1
-        fi
-        echo "✅ AST-Grep scan tests passed"
-        
-    - name: Run Tools Registration Tests
-      run: |
-        echo "🛠️ Testing MCP Tools Registration..."
-        python tests/test_mcp_tools_registration.py
-        if [ $? -ne 0 ]; then
-          echo "❌ Tools registration tests failed!"
-          exit 1
-        fi
-        echo "✅ Tools registration tests passed"
-        
-    - name: Run Resource Management Tests
-      run: |
-        echo "📚 Testing MCP Resource Management..."
-        python tests/test_mcp_resources.py
-        if [ $? -ne 0 ]; then
-          echo "❌ Resource management tests failed!"
-          exit 1
-        fi
-        echo "✅ Resource management tests passed"
+        echo "🔍 Testing AST-Grep and MCP Functionality..."
+        python -m pytest tests/test_ast_grep_search.py tests/test_ast_grep_scan.py tests/test_mcp_tools_registration.py tests/test_mcp_resources.py -v
+        echo "✅ AST-Grep and MCP functionality tests passed"
 
   # Performance and Load Tests (optional for faster CI)
   performance-tests:
@@ -288,7 +216,7 @@ jobs:
     - name: Run Performance Tests
       run: |
         echo "⚡ Testing MCP Performance & Load Handling..."
-        timeout 10m python tests/test_mcp_performance.py || {
+        timeout 10m python -m pytest tests/test_mcp_performance.py -v || {
           echo "❌ Performance tests failed or timed out!"
           exit 1
         }
@@ -331,33 +259,8 @@ jobs:
     - name: Run Comprehensive MCP Validation Suite
       run: |
         echo "🔄 Running Comprehensive MCP Validation Test Suite..."
-        python tests/run_mcp_validation_tests.py
-        
-        # Check if validation results file was created
-        if [ -f "tests/mcp_validation_results.json" ]; then
-          echo "📊 Validation results generated successfully"
-          
-          # Extract and display key metrics
-          echo "📊 Analyzing MCP validation results..."
-          python3 scripts/analyze_validation_results.py tests/mcp_validation_results.json
-        else
-          echo "❌ Validation results file not found!"
-          exit 1
-        fi
-        
-    - name: Upload validation results
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: mcp-validation-results
-        path: tests/mcp_validation_results.json
-        
-    - name: Upload test logs
-      uses: actions/upload-artifact@v4
-      if: failure()
-      with:
-        name: test-logs
-        path: tests/*.log
+        python -m pytest tests/ -v --tb=short
+        echo "✅ Comprehensive MCP validation passed"
 
   # Multi-Python version compatibility test
   compatibility-test:
@@ -366,7 +269,7 @@ jobs:
     needs: [foundation-check]
     strategy:
       matrix:
-        python-version: ["3.10", "3.11", "3.12"]
+        python-version: ["3.12", "3.13", "3.14"]
         
     steps:
     - name: Checkout code
@@ -390,8 +293,7 @@ jobs:
     - name: Run Basic MCP Validation
       run: |
         echo "🐍 Testing Python ${{ matrix.python-version }} compatibility..."
-        python tests/test_mcp_protocol_messages.py
-        python tests/test_mcp_schema_compliance.py
+        python -m pytest tests/test_mcp_schema_compliance.py tests/test_mcp_resources.py -v
         echo "✅ Python ${{ matrix.python-version }} compatibility verified"
 
   # Final status check with comprehensive reporting
@@ -402,13 +304,6 @@ jobs:
     if: always()
     
     steps:
-    - name: Download validation results
-      uses: actions/download-artifact@v4
-      with:
-        name: mcp-validation-results
-        path: results/
-      continue-on-error: true
-        
     - name: Generate Final Report
       run: |
         echo "📋 FINAL MCP VALIDATION REPORT"

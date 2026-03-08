@@ -19,13 +19,13 @@ This guide will walk you through everything you need to know to get the most out
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Python 3.10 or higher
-- Claude Desktop, Continue, or any MCP-compatible AI assistant
+- Python 3.12 or higher
+- Claude Code, Codex, OpenCode, or any MCP-compatible AI assistant
 
 ### 1-Minute Setup
 ```bash
 # Clone and install AST-MCP
-git clone https://github.com/AndEnd-Org/ast-mcp.git
+git clone https://github.com/AndEnd-Collective/ast-mcp.git
 cd ast-mcp
 pip install -e .
 
@@ -35,8 +35,8 @@ python -c "import ast_grep_mcp; print('✅ Installation successful')"
 
 ### Add to Your AI Coding Tool
 
-#### Claude Desktop
-Add this to your `claude_desktop_config.json`:
+#### Claude Code
+Add this to your `.claude/settings.json` or project-level `.mcp.json`:
 ```json
 {
   "mcpServers": {
@@ -49,7 +49,7 @@ Add this to your `claude_desktop_config.json`:
 }
 ```
 
-#### Continue IDE / Cursor / Windsurf
+#### Codex / OpenCode
 Add this to your MCP configuration:
 ```json
 {
@@ -63,25 +63,25 @@ Add this to your MCP configuration:
 }
 ```
 
-**That's it!** You can now use AST-MCP with Claude.
+**That's it!** You can now use AST-MCP with your AI coding tool.
 
 ## 🔧 Installation Guide
 
 ### Option 1: From Source (Current)
 ```bash
-git clone https://github.com/AndEnd-Org/ast-mcp.git
+git clone https://github.com/AndEnd-Collective/ast-mcp.git
 cd ast-mcp
 pip install -e .
 ```
 
 ### Option 2: Development Setup
 ```bash
-git clone https://github.com/AndEnd-Org/ast-mcp.git
+git clone https://github.com/AndEnd-Collective/ast-mcp.git
 cd ast-mcp
 pip install -e .[dev]  # Includes development tools
 ```
 
-> 📋 **Note**: PyPI package coming soon! For now, install from source.
+> 📋 **Note**: PyPI package is planned for a future release. For now, install from source.
 
 ### Verify Installation
 ```bash
@@ -392,13 +392,15 @@ Add debug information to your queries:
 
 ## 🤝 Integration Examples
 
-### With Continue IDE
-Add to your Continue config:
+### With Claude Code
+Add to your `.claude/settings.json` or project-level `.mcp.json`:
 ```json
 {
   "mcpServers": {
     "ast-mcp": {
-      "command": "ast-mcp"
+      "command": "python",
+      "args": ["-m", "ast_grep_mcp.server"],
+      "cwd": "/path/to/ast-mcp"
     }
   }
 }
@@ -422,7 +424,7 @@ results = search_code("function.*async", "src/**/*.js")
 
 ## 📞 Getting Help
 
-- **GitHub Issues**: [Report bugs or request features](https://github.com/AndEnd-Org/ast-mcp/issues)
+- **GitHub Issues**: [Report bugs or request features](https://github.com/AndEnd-Collective/ast-mcp/issues)
 - **Documentation**: Check the `/docs` folder for detailed API docs
 - **Examples**: Look at the `/examples` directory for more use cases
 

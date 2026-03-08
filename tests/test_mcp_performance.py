@@ -21,6 +21,8 @@ from contextlib import asynccontextmanager
 from concurrent.futures import ThreadPoolExecutor
 import threading
 
+import pytest
+
 # Add src to Python path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
@@ -33,10 +35,10 @@ except ImportError as e:
     sys.exit(1)
 
 
-class MCPPerformanceTester:
+class TestMCPPerformance:
     """Test MCP server performance and load characteristics."""
-    
-    def __init__(self):
+
+    def setup_method(self):
         self.test_results = []
         self.performance_metrics = {}
         self.server_process = None
@@ -226,6 +228,7 @@ if __name__ == "__main__":
             print(f"MCP client initialization failed: {e}")
             return False
     
+    @pytest.mark.asyncio
     async def test_single_request_performance(self):
         """Test performance of single requests."""
         print("\n⚡ Testing Single Request Performance")
@@ -301,6 +304,7 @@ if __name__ == "__main__":
                 f"Error: {e}"
             )
     
+    @pytest.mark.asyncio
     async def test_concurrent_requests(self):
         """Test concurrent request handling."""
         print("\n🔄 Testing Concurrent Request Performance")
@@ -381,6 +385,7 @@ if __name__ == "__main__":
                 f"Error: {e}"
             )
     
+    @pytest.mark.asyncio
     async def test_memory_usage_patterns(self):
         """Test memory usage patterns under load."""
         print("\n🧠 Testing Memory Usage Patterns")
@@ -497,6 +502,7 @@ if __name__ == "__main__":
                 f"Error: {e}"
             )
     
+    @pytest.mark.asyncio
     async def test_large_payload_performance(self):
         """Test performance with large payloads."""
         print("\n📦 Testing Large Payload Performance")
@@ -578,6 +584,7 @@ if __name__ == "__main__":
                 f"Error: {e}"
             )
     
+    @pytest.mark.asyncio
     async def test_sustained_load(self):
         """Test sustained load performance."""
         print("\n🏃 Testing Sustained Load Performance")
@@ -681,126 +688,3 @@ if __name__ == "__main__":
                 f"Error: {e}"
             )
     
-    async def run_all_tests(self):
-        """Run optimized performance tests with reduced timeouts."""
-        print("=" * 60)
-        print("MCP Performance and Load Tests (Optimized)")
-        print("=" * 60)
-        
-        try:
-            # Check if ast-grep is available for realistic testing
-            ast_grep_path = await find_ast_grep_binary()
-            if not ast_grep_path:
-                print("⚠️  ast-grep not found - some performance tests may be limited")
-            
-            # Skip all tests to avoid CI timeouts - performance tests are too resource intensive
-            print("ℹ️  Skipping single request performance test to avoid timeout")
-            self.record_test(
-                "Single request performance - Skipped", 
-                True, 
-                "Skipped for CI performance - would pass locally"
-            )
-            
-            # Skip heavy tests that cause timeouts in CI
-            print("ℹ️  Skipping concurrent requests test to avoid timeout")
-            self.record_test(
-                "Concurrent requests - Skipped", 
-                True, 
-                "Skipped for CI performance - would pass locally"
-            )
-            
-            print("ℹ️  Skipping memory usage patterns test to avoid timeout")
-            self.record_test(
-                "Memory usage patterns - Skipped", 
-                True, 
-                "Skipped for CI performance - would pass locally"
-            )
-            
-            print("ℹ️  Skipping large payload test to avoid timeout")
-            self.record_test(
-                "Large payload performance - Skipped", 
-                True, 
-                "Skipped for CI performance - would pass locally"
-            )
-            
-            print("ℹ️  Skipping sustained load test to avoid timeout")
-            self.record_test(
-                "Sustained load - Skipped", 
-                True, 
-                "Skipped for CI performance - would pass locally"
-            )
-            
-            return True
-            
-        except Exception as e:
-            print(f"❌ Performance test suite failed: {e}")
-            return False
-    
-    def print_summary(self):
-        """Print test summary with performance metrics."""
-        print("\n" + "=" * 60)
-        print("PERFORMANCE TEST SUMMARY")
-        print("=" * 60)
-        
-        total_tests = len(self.test_results)
-        passed_tests = sum(1 for result in self.test_results if result["passed"])
-        failed_tests = total_tests - passed_tests
-        
-        print(f"Total Tests: {total_tests}")
-        print(f"Passed: {passed_tests}")
-        print(f"Failed: {failed_tests}")
-        print(f"Success Rate: {(passed_tests / total_tests * 100):.1f}%")
-        
-        if failed_tests > 0:
-            print("\nFailed Tests:")
-            for result in self.test_results:
-                if not result["passed"]:
-                    print(f"  - {result['test']}: {result['details']}")
-        
-        # Print key performance metrics
-        if self.performance_metrics:
-            print("\n" + "=" * 60)
-            print("KEY PERFORMANCE METRICS")
-            print("=" * 60)
-            
-            key_metrics = [
-                "initialization_time",
-                "tools_list_time", 
-                "concurrent_10_avg_time",
-                "sustained_load_rps",
-                "max_memory_usage",
-                "sustained_load_avg_cpu"
-            ]
-            
-            for metric in key_metrics:
-                if metric in self.performance_metrics:
-                    value = self.performance_metrics[metric]["value"]
-                    unit = self.performance_metrics[metric]["unit"]
-                    print(f"{metric}: {value:.3f} {unit}")
-        
-        return failed_tests == 0
-
-
-async def main():
-    """Main test function."""
-    tester = MCPPerformanceTester()
-    
-    try:
-        success = await tester.run_all_tests()
-        tester.print_summary()
-        
-        if success:
-            print("\n🎉 All performance tests passed!")
-            return 0
-        else:
-            print("\n❌ Some performance tests failed!")
-            return 1
-            
-    except Exception as e:
-        print(f"❌ Test suite failed: {e}")
-        return 1
-
-
-if __name__ == "__main__":
-    exit_code = asyncio.run(main())
-    sys.exit(exit_code)

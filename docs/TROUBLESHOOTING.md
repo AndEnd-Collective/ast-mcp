@@ -39,7 +39,7 @@ ast-grep-mcp --config config.yaml --dry-run
 ### Environment Check
 ```bash
 # Check Python version
-python --version  # Should be 3.8+
+python --version  # Should be 3.12+
 
 # Check installed packages
 pip list | grep -E "(pydantic|yaml|cryptography)"
@@ -119,7 +119,7 @@ env | grep AST_GREP
 
 4. **Check Python version compatibility:**
    ```bash
-   python --version  # Must be 3.8 or higher
+   python --version  # Must be 3.12 or higher
    ```
 
 ### Issue: Missing System Dependencies
@@ -755,9 +755,8 @@ If troubleshooting doesn't resolve your issue:
    - Steps to reproduce
 
 For immediate help:
-- **GitHub Issues**: https://github.com/your-org/ast-grep-mcp/issues
-- **Documentation**: https://your-docs-site.com
-- **Community Forum**: https://your-community-forum.com
+- **GitHub Issues**: https://github.com/AndEnd-Collective/ast-mcp/issues
+- **Documentation**: https://github.com/AndEnd-Collective/ast-mcp#readme
 
 ---
 

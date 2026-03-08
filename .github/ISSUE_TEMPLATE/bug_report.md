@@ -41,7 +41,7 @@ assignees: ''
 
 **Installation method:**
 - [ ] PyPI (`pip install ast-grep-mcp`)
-- [ ] Git (`pip install git+https://github.com/AndEnd-Org/ast-mcp.git`)
+- [ ] Git (`pip install git+https://github.com/AndEnd-Collective/ast-mcp.git`)
 - [ ] Local development (`pip install -e .`)
 
 ## 📜 Error Logs

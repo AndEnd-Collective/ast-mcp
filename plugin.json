@@ -1,0 +1,15 @@
+{
+  "name": "ast-mcp",
+  "description": "AST-powered semantic code analysis for AI coding agents",
+  "version": "1.0.0",
+  "author": "AndEnd-Collective",
+  "license": "MIT",
+  "repository": "https://github.com/AndEnd-Collective/ast-mcp",
+  "mcp_servers": {
+    "ast-mcp": {
+      "command": "python",
+      "args": ["-m", "ast_grep_mcp"],
+      "env": {}
+    }
+  }
+}

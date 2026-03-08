@@ -21,7 +21,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.11'
+        python-version: '3.14'
     
     - name: Install build dependencies
       run: |
@@ -81,9 +81,9 @@ jobs:
           - 🔗 Easy integration with Claude Desktop and other MCP clients
           
           ### Prerequisites
-          - Python 3.8+
+          - Python 3.12+
           - AST-Grep binary: https://ast-grep.github.io/guide/quick-start.html#installation
           
-          See [INSTALL.md](https://github.com/AndEnd-Org/ast-mcp/blob/main/INSTALL.md) for detailed setup instructions.
+          See [INSTALL.md](https://github.com/AndEnd-Collective/ast-mcp/blob/main/INSTALL.md) for detailed setup instructions.
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
