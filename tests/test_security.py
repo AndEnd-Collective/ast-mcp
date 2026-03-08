@@ -518,10 +518,13 @@ class TestSecurityManager:
 
     # -- validate_path --
 
-    def test_validate_path_valid_file(self, tmp_path, security_manager):
+    def test_validate_path_valid_file(self, tmp_path):
+        cfg = ValidationConfig(blocked_paths={'/etc', '/proc', '/sys', '/dev', '/root',
+                                               'C:\\Windows', 'C:\\System32', 'C:\\Users\\Administrator'})
+        mgr = SecurityManager(config=cfg)
         f = tmp_path / "hello.py"
         f.write_text("pass")
-        result = security_manager.validate_path(str(f))
+        result = mgr.validate_path(str(f))
         assert result == f.resolve()
 
     def test_validate_path_traversal_dotdot(self, tmp_path, security_manager):
@@ -1060,6 +1063,9 @@ class TestConvenienceFunctions:
     # -- secure_validate_path --
 
     def test_secure_validate_path_valid(self, tmp_path):
+        cfg = ValidationConfig(blocked_paths={'/etc', '/proc', '/sys', '/dev', '/root',
+                                               'C:\\Windows', 'C:\\System32', 'C:\\Users\\Administrator'})
+        initialize_security(cfg)
         f = tmp_path / "test.py"
         f.write_text("pass")
         result = secure_validate_path(str(f))
