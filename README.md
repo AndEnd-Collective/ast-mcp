@@ -48,12 +48,12 @@ cd ast-mcp
 pip install -e .
 ```
 
-> 📋 **Note**: PyPI package coming soon! For now, install from source.
+> 📋 **Note**: PyPI package is planned for a future release. For now, install from source.
 
 ## 🚀 Quick Start
 
-### Claude Desktop
-Add to your `claude_desktop_config.json`:
+### Claude Code
+Add to your `.claude/settings.json` or project-level `.mcp.json`:
 ```json
 {
   "mcpServers": {
@@ -66,8 +66,8 @@ Add to your `claude_desktop_config.json`:
 }
 ```
 
-### Continue IDE
-Add to your `config.json`:
+### Codex
+Add to your MCP configuration:
 ```json
 {
   "mcpServers": {
@@ -80,27 +80,13 @@ Add to your `config.json`:
 }
 ```
 
-### Cursor
-Add to your `cursor_rules` or MCP configuration:
+### OpenCode
+Add to your `opencode.json` MCP configuration:
 ```json
 {
   "mcpServers": {
     "ast-mcp": {
       "command": "python",
-      "args": ["-m", "ast_grep_mcp.server"],
-      "cwd": "/path/to/ast-mcp"
-    }
-  }
-}
-```
-
-### Windsurf (Codeium)
-Add to your MCP server configuration:
-```json
-{
-  "mcpServers": {
-    "ast-mcp": {
-      "command": "python", 
       "args": ["-m", "ast_grep_mcp.server"],
       "cwd": "/path/to/ast-mcp"
     }
@@ -143,7 +129,7 @@ Built for production with:
 
 ## 📋 Requirements
 
-- Python 3.10+
+- Python 3.12+
 - AST-Grep binary (auto-installed)
 
 ## 🤝 Contributing

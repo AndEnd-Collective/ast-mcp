@@ -101,7 +101,7 @@ python tests/test_mcp_structured_output.py
 ## 🔧 Prerequisites
 
 ### Required Software
-- **Python 3.10+**
+- **Python 3.12+**
 - **ast-grep binary** (install via `cargo install ast-grep-cli`)
 
 ### Required Python Packages
